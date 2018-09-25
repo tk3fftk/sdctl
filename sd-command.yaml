@@ -1,0 +1,40 @@
+# Namespace for the command
+namespace: tk3fftk
+# Command name itself
+name: sdctl
+# Description of the command and what it does
+description: |
+  sdctl - Screwdriver.cd API wrapper
+usage: |
+  NAME:
+     sdctl - Screwdriver.cd API wrapper
+  
+  USAGE:
+     validate yamls, start build locally
+  
+  VERSION:
+     0.0.2
+  
+  COMMANDS:
+       get                    get sdctl settings and Screwdriver.cd information
+       set                    set sdctl settings
+       context                handle screwdriver contexts
+       clear                  clear your setting and set to default
+       build, b               start a job. parameters: <pipelieid> <start_from> 
+       validate, v            validate your screwdriver.yaml, default to screwdriver.yaml
+       validate-template, vt  validate your sd-template.yaml, default to sd-template.yaml
+       help, h                Shows a list of commands or help for one command
+  
+  GLOBAL OPTIONS:
+     --help, -h     show help
+     --version, -v  print the version
+  COPYRIGHT:
+     hitakats
+maintainer: tktk.stereoman@gmail.com
+# Major and Minor version number (patch is automatic)
+version: 0.1.0
+# Format the command is in (see below for examples)
+# Valid options: habitat, docker, binary
+format: binary
+binary:
+    file: ./sdctl
