@@ -1,61 +1,18 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
 
-	"github.com/tk3fftk/sdctl/config"
-	"github.com/tk3fftk/sdctl/sdapi"
+	"github.com/tk3fftk/sdctl/pkg/sdapi"
+	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
 	"gopkg.in/urfave/cli.v1"
 )
 
-var (
-	readFile  = ioutil.ReadFile
-	writeFile = ioutil.WriteFile
-)
-
-// SdctlContexts represents the context of Screwdriver.cds
-type SdctlContexts struct {
-	CurrentContext string                        `json:"current"`
-	Contexts       map[string]config.SdctlConfig `json:"contexts"`
-}
-
-func loadYaml(yamlPath string) (yaml string, err error) {
-	yamlFile, err := readFile(yamlPath)
-	if err != nil {
-		return
-	}
-	yaml = fmt.Sprintf("%q", string(yamlFile[:]))
-
-	return
-}
-
-func initDotFile(path string, force bool) (err error) {
-	_, err = readFile(path)
-	if err != nil || force {
-		conf := config.SdctlConfig{
-			UserToken: "",
-			APIURL:    "",
-			SDJWT:     "",
-		}
-		context := SdctlContexts{
-			CurrentContext: "default",
-			Contexts:       make(map[string]config.SdctlConfig),
-		}
-		context.Contexts["default"] = conf
-
-		f, _ := json.Marshal(context)
-		err = writeFile(path, f, 0660)
-		if err != nil {
-			return
-		}
-	}
-	return
-}
+var configFileName = ".sdctl"
 
 func failureExit(err error) {
 	if err != nil {
@@ -64,105 +21,13 @@ func failureExit(err error) {
 	os.Exit(1)
 }
 
-func getConfig(path, context string) (conf config.SdctlConfig, err error) {
-	confFile, err := readFile(path)
+func readYaml(yamlPath string) (yaml string, err error) {
+	yamlFile, err := ioutil.ReadFile(yamlPath)
 	if err != nil {
 		return
 	}
+	yaml = fmt.Sprintf("%q", string(yamlFile[:]))
 
-	sdcontexts, err := getSdctlContexts(path)
-	if err != nil {
-		return
-	}
-
-	if err = json.Unmarshal(confFile, &sdcontexts); err != nil {
-		return
-	}
-	if context == "" {
-		conf = sdcontexts.Contexts[sdcontexts.CurrentContext]
-	} else {
-		conf = sdcontexts.Contexts[context]
-	}
-
-	return
-}
-
-func updateConfig(path, userToken, apiURL, sdJWT, context string) (err error) {
-	conf, err := getConfig(path, context)
-	if err != nil {
-		return
-	}
-
-	if userToken != "" {
-		conf.UserToken = userToken
-	}
-	if apiURL != "" {
-		conf.APIURL = apiURL
-	}
-	if sdJWT != "" {
-		conf.SDJWT = sdJWT
-	}
-
-	err = updateSdctlContexts(path, conf, context)
-	return
-}
-
-func getSdctlContexts(path string) (sdcontexts SdctlContexts, err error) {
-	confFile, err := readFile(path)
-	if err != nil {
-		return
-	}
-
-	if err = json.Unmarshal(confFile, &sdcontexts); err != nil {
-		return
-	}
-
-	return
-}
-
-func updateCurrentContext(path, context string) (err error) {
-	sdcontexts, err := getSdctlContexts(path)
-	if err != nil {
-		return
-	}
-
-	current := sdcontexts.CurrentContext
-	if current == context {
-		return
-	}
-
-	for cont := range sdcontexts.Contexts {
-		if cont == context {
-			sdcontexts.CurrentContext = context
-			f, _ := json.Marshal(sdcontexts)
-			err = writeFile(path, f, 0660)
-			break
-		}
-	}
-
-	if current == sdcontexts.CurrentContext {
-		err = fmt.Errorf("%s does not exist", context)
-	}
-
-	return
-}
-
-func updateSdctlContexts(path string, newConf config.SdctlConfig, context string) (err error) {
-	sdcontexts, err := getSdctlContexts(path)
-
-	var f []byte
-	if context == "" {
-		sdcontexts.Contexts[sdcontexts.CurrentContext] = newConf
-	} else {
-		sdcontexts.Contexts[context] = newConf
-	}
-
-	f, err = json.Marshal(sdcontexts)
-	if err != nil {
-		return
-	}
-
-	err = writeFile(path, f, 0660)
 	return
 }
 
@@ -172,11 +37,13 @@ func main() {
 	if err != nil {
 		failureExit(err)
 	}
-	var configPath = usr.HomeDir + "/.sdctl"
-	err = initDotFile(configPath, false)
+
+	configPath := usr.HomeDir + "/" + configFileName
+	config, err := sdctl_context.LoadConfig(configPath, false)
 	if err != nil {
 		failureExit(err)
 	}
+	sdctx := config.SdctlContexts[config.CurrentContext]
 
 	app := cli.NewApp()
 	app.Name = "sdctl"
@@ -194,11 +61,7 @@ func main() {
 					Name:  "token",
 					Usage: "get your user token",
 					Action: func(c *cli.Context) error {
-						conf, err := getConfig(configPath, "")
-						if err != nil {
-							failureExit(err)
-						}
-						fmt.Println(conf.UserToken)
+						config.PrintParam(sdctl_context.UserTokenKey, nil)
 						return nil
 					},
 				},
@@ -206,11 +69,7 @@ func main() {
 					Name:  "api",
 					Usage: "get configured api url",
 					Action: func(c *cli.Context) error {
-						conf, err := getConfig(configPath, "")
-						if err != nil {
-							failureExit(err)
-						}
-						fmt.Println(conf.APIURL)
+						config.PrintParam(sdctl_context.APIURLKey, nil)
 						return nil
 					},
 				},
@@ -218,11 +77,7 @@ func main() {
 					Name:  "jwt",
 					Usage: "show your jwt",
 					Action: func(c *cli.Context) error {
-						conf, err := getConfig(configPath, "")
-						if err != nil {
-							failureExit(err)
-						}
-						fmt.Println("Bearer: " + conf.SDJWT)
+						config.PrintParam(sdctl_context.SDJWTKey, nil)
 						return nil
 					},
 				},
@@ -237,11 +92,7 @@ func main() {
 						buildID := c.Args().Get(0)
 
 						api := sdapi.New()
-						conf, err := getConfig(configPath, "")
-						if err != nil {
-							failureExit(err)
-						}
-						if err := api.GetPipelinePageFromBuildID(conf, buildID); err != nil {
+						if err := api.GetPipelinePageFromBuildID(sdctx, buildID); err != nil {
 							failureExit(err)
 						}
 						return nil
@@ -260,9 +111,9 @@ func main() {
 						if len(c.Args()) == 0 {
 							return cli.ShowAppHelp(c)
 						}
-						if err = updateConfig(configPath, c.Args().Get(0), "", "", ""); err != nil {
-							failureExit(err)
-						}
+
+						config.SetParam(sdctl_context.UserTokenKey, c.Args().Get(0), nil)
+						config.Update(configPath)
 						return nil
 					},
 				},
@@ -273,9 +124,8 @@ func main() {
 						if len(c.Args()) == 0 {
 							return cli.ShowAppHelp(c)
 						}
-						if err = updateConfig(configPath, "", c.Args().Get(0), "", ""); err != nil {
-							failureExit(err)
-						}
+						config.SetParam(sdctl_context.APIURLKey, c.Args().Get(0), nil)
+						config.Update(configPath)
 						return nil
 					},
 				},
@@ -284,19 +134,17 @@ func main() {
 					Usage: "get and store jwt locally",
 					Action: func(c *cli.Context) error {
 						api := sdapi.New()
-						conf, err := getConfig(configPath, "")
-						if err != nil {
-							failureExit(err)
-						} else if conf.UserToken == "" {
+						// TODO handle it in sdapi.go
+						if sdctx.UserToken == "" {
 							failureExit(errors.New("you must set user token before getting JWT"))
 						}
-						token, err := api.GetJwt(conf)
+						token, err := api.GetJwt(sdctx)
 						if err != nil {
 							failureExit(err)
 						}
-						if err = updateConfig(configPath, "", "", token, ""); err != nil {
-							failureExit(err)
-						}
+
+						config.SetParam(sdctl_context.SDJWTKey, token, nil)
+						config.Update(configPath)
 						println("Bearer " + token)
 						return nil
 					},
@@ -312,13 +160,7 @@ func main() {
 					Usage:   "show context list",
 					Aliases: []string{"ls"},
 					Action: func(c *cli.Context) error {
-						contexts, err := getSdctlContexts(configPath)
-						if err != nil {
-							failureExit(err)
-						}
-						for key := range contexts.Contexts {
-							fmt.Println(key)
-						}
+						config.PrintParam(sdctl_context.ContextsKey, nil)
 						return nil
 					},
 				},
@@ -326,11 +168,7 @@ func main() {
 					Name:  "current",
 					Usage: "show current context",
 					Action: func(c *cli.Context) error {
-						contexts, err := getSdctlContexts(configPath)
-						if err != nil {
-							failureExit(err)
-						}
-						fmt.Println(contexts.CurrentContext)
+						config.PrintParam(sdctl_context.CurrentContextKey, nil)
 						return nil
 					},
 				},
@@ -342,15 +180,8 @@ func main() {
 							return cli.ShowAppHelp(c)
 						}
 						context := c.Args().Get(0)
-						err = updateCurrentContext(configPath, context)
-						if err != nil {
-							if err = updateConfig(configPath, "", "", "", context); err != nil {
-								failureExit(err)
-							}
-							if err = updateCurrentContext(configPath, context); err != nil {
-								failureExit(err)
-							}
-						}
+						config.SetParam(sdctl_context.CurrentContextKey, context, nil)
+						config.Update(configPath)
 						return nil
 					},
 				},
@@ -359,10 +190,7 @@ func main() {
 			Name:  "clear",
 			Usage: "clear your setting and set to default",
 			Action: func(c *cli.Context) error {
-				if err := initDotFile(configPath, true); err != nil {
-					failureExit(err)
-				}
-				println("Cleared your settings")
+				sdctl_context.LoadConfig(configPath, true)
 				return nil
 			},
 		}, {
@@ -374,11 +202,7 @@ func main() {
 					return cli.ShowAppHelp(c)
 				}
 				api := sdapi.New()
-				conf, err := getConfig(configPath, "")
-				if err != nil {
-					failureExit(err)
-				}
-				if err := api.PostEvent(conf, c.Args().Get(0), c.Args().Get(1), false); err != nil {
+				if err := api.PostEvent(sdctx, c.Args().Get(0), c.Args().Get(1), false); err != nil {
 					failureExit(err)
 				}
 				return nil
@@ -394,16 +218,12 @@ func main() {
 				} else {
 					f = c.Args().Get(0)
 				}
-				yaml, err := loadYaml(f)
+				yaml, err := readYaml(f)
 				if err != nil {
 					failureExit(err)
 				}
 				api := sdapi.New()
-				conf, err := getConfig(configPath, "")
-				if err != nil {
-					failureExit(err)
-				}
-				if err := api.Validator(conf, yaml, false); err != nil {
+				if err := api.Validator(sdctx, yaml, false); err != nil {
 					failureExit(err)
 				}
 
@@ -420,16 +240,12 @@ func main() {
 				} else {
 					f = c.Args().Get(0)
 				}
-				yaml, err := loadYaml(f)
+				yaml, err := readYaml(f)
 				if err != nil {
 					failureExit(err)
 				}
 				api := sdapi.New()
-				conf, err := getConfig(configPath, "")
-				if err != nil {
-					failureExit(err)
-				}
-				if err := api.ValidatorTemplate(conf, yaml, false); err != nil {
+				if err := api.ValidatorTemplate(sdctx, yaml, false); err != nil {
 					failureExit(err)
 				}
 				return nil

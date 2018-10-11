@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tk3fftk/sdctl/config"
+	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
 )
 
 var transport = &http.Transport{
@@ -21,11 +21,11 @@ var client = &http.Client{Transport: transport}
 
 // SDAPI wraps Screwdriver.cd API
 type SDAPI interface {
-	GetJwt(config config.SdctlConfig) (string, error)
-	PostEvent(config config.SdctlConfig, pipelineID string, startFrom string, retry bool) error
-	Validator(config config.SdctlConfig, yaml string, retry bool) error
-	ValidatorTemplate(config config.SdctlConfig, yaml string, retry bool) error
-	GetPipelinePageFromBuildID(conf config.SdctlConfig, buildID string) error
+	GetJwt(conf sdctl_context.SdctlContext) (string, error)
+	PostEvent(conf sdctl_context.SdctlContext, pipelineID string, startFrom string, retry bool) error
+	Validator(conf sdctl_context.SdctlContext, yaml string, retry bool) error
+	ValidatorTemplate(conf sdctl_context.SdctlContext, yaml string, retry bool) error
+	GetPipelinePageFromBuildID(conf sdctl_context.SdctlContext, buildID string) error
 }
 
 type validatorResponse struct {
@@ -68,9 +68,9 @@ func New() SDAPI {
 	return SDAPI(s)
 }
 
-func (sd sdapi) GetJwt(conf config.SdctlConfig) (string, error) {
+func (sd sdapi) GetJwt(sdctlContext sdctl_context.SdctlContext) (string, error) {
 	jwt := new(tokenResponse)
-	u := conf.APIURL + "/v4/auth/token?api_token=" + conf.UserToken
+	u := sdctlContext.APIURL + "/v4/auth/token?api_token=" + sdctlContext.UserToken
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return "", err
@@ -90,8 +90,8 @@ func (sd sdapi) GetJwt(conf config.SdctlConfig) (string, error) {
 	return jwt.JWT, err
 }
 
-func (sd sdapi) PostEvent(conf config.SdctlConfig, pipelineID string, startFrom string, retry bool) error {
-	u := conf.APIURL + "/v4/events"
+func (sd sdapi) PostEvent(sdctlContext sdctl_context.SdctlContext, pipelineID string, startFrom string, retry bool) error {
+	u := sdctlContext.APIURL + "/v4/events"
 	b := map[string]string{
 		"pipelineId": pipelineID,
 		"startFrom":  startFrom,
@@ -102,17 +102,17 @@ func (sd sdapi) PostEvent(conf config.SdctlConfig, pipelineID string, startFrom 
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+conf.SDJWT)
+	req.Header.Add("Authorization", "Bearer "+sdctlContext.SDJWT)
 	res, err := client.Do(req)
 	if res.StatusCode != 201 {
 		if retry {
 			return errors.New(strconv.Itoa(res.StatusCode))
 		}
-		conf.SDJWT, err = sd.GetJwt(conf)
+		sdctlContext.SDJWT, err = sd.GetJwt(sdctlContext)
 		if err != nil {
 			return err
 		}
-		return sd.PostEvent(conf, pipelineID, startFrom, true)
+		return sd.PostEvent(sdctlContext, pipelineID, startFrom, true)
 	} else if err != nil {
 		return err
 	}
@@ -120,9 +120,9 @@ func (sd sdapi) PostEvent(conf config.SdctlConfig, pipelineID string, startFrom 
 	return nil
 }
 
-func (sd sdapi) Validator(conf config.SdctlConfig, yaml string, retry bool) error {
+func (sd sdapi) Validator(sdctlContext sdctl_context.SdctlContext, yaml string, retry bool) error {
 	vr := new(validatorResponse)
-	u := conf.APIURL + "/v4/validator"
+	u := sdctlContext.APIURL + "/v4/validator"
 	b := `{"yaml":` + yaml + `}`
 
 	req, err := http.NewRequest("POST", u, bytes.NewBuffer([]byte(b)))
@@ -130,17 +130,17 @@ func (sd sdapi) Validator(conf config.SdctlConfig, yaml string, retry bool) erro
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+conf.SDJWT)
+	req.Header.Add("Authorization", "Bearer "+sdctlContext.SDJWT)
 	res, err := client.Do(req)
 	if res.StatusCode != 200 {
 		if retry {
 			return errors.New(strconv.Itoa(res.StatusCode))
 		}
-		conf.SDJWT, err = sd.GetJwt(conf)
+		sdctlContext.SDJWT, err = sd.GetJwt(sdctlContext)
 		if err != nil {
 			return err
 		}
-		return sd.Validator(conf, yaml, true)
+		return sd.Validator(sdctlContext, yaml, true)
 	} else if err != nil {
 		return err
 	}
@@ -160,9 +160,9 @@ func (sd sdapi) Validator(conf config.SdctlConfig, yaml string, retry bool) erro
 	return nil
 }
 
-func (sd sdapi) ValidatorTemplate(conf config.SdctlConfig, yaml string, retry bool) error {
+func (sd sdapi) ValidatorTemplate(sdctlContext sdctl_context.SdctlContext, yaml string, retry bool) error {
 	tvr := new(templateValidatorResponse)
-	u := conf.APIURL + "/v4/validator/template"
+	u := sdctlContext.APIURL + "/v4/validator/template"
 	b := `{"yaml":` + yaml + `}`
 
 	req, err := http.NewRequest("POST", u, bytes.NewBuffer([]byte(b)))
@@ -170,17 +170,17 @@ func (sd sdapi) ValidatorTemplate(conf config.SdctlConfig, yaml string, retry bo
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+conf.SDJWT)
+	req.Header.Add("Authorization", "Bearer "+sdctlContext.SDJWT)
 	res, err := client.Do(req)
 	if res.StatusCode != 200 {
 		if retry {
 			return errors.New(strconv.Itoa(res.StatusCode))
 		}
-		conf.SDJWT, err = sd.GetJwt(conf)
+		sdctlContext.SDJWT, err = sd.GetJwt(sdctlContext)
 		if err != nil {
 			return err
 		}
-		return sd.ValidatorTemplate(conf, yaml, true)
+		return sd.ValidatorTemplate(sdctlContext, yaml, true)
 	} else if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func (sd sdapi) ValidatorTemplate(conf config.SdctlConfig, yaml string, retry bo
 	return nil
 }
 
-func (sd sdapi) GetPipelinePageFromBuildID(conf config.SdctlConfig, buildID string) error {
+func (sd sdapi) GetPipelinePageFromBuildID(sdctlContext sdctl_context.SdctlContext, buildID string) error {
 	buildIDList := strings.Split(strings.Replace(strings.TrimSpace(buildID), "\n", " ", -1), " ")
 	buildIDLength := len(buildIDList)
 
@@ -218,17 +218,17 @@ func (sd sdapi) GetPipelinePageFromBuildID(conf config.SdctlConfig, buildID stri
 		go func(b string) {
 			defer wg.Done()
 
-			br, err := getBuilds(conf, b)
+			br, err := getBuilds(sdctlContext, b)
 			if err != nil {
 				exit <- err
 				return
 			}
-			er, err := getEvents(conf, br.EventID)
+			er, err := getEvents(sdctlContext, br.EventID)
 			if err != nil {
 				exit <- err
 				return
 			}
-			println(strings.Replace(conf.APIURL, "api-cd", "cd", 1) + "/pipelines/" + strconv.Itoa(er.PipelineID) + "/builds/" + b)
+			println(strings.Replace(sdctlContext.APIURL, "api-cd", "cd", 1) + "/pipelines/" + strconv.Itoa(er.PipelineID) + "/builds/" + b)
 		}(b)
 	}
 
@@ -242,9 +242,9 @@ func (sd sdapi) GetPipelinePageFromBuildID(conf config.SdctlConfig, buildID stri
 	}
 }
 
-func getBuilds(conf config.SdctlConfig, buildID string) (*buildResponse, error) {
+func getBuilds(sdctlContext sdctl_context.SdctlContext, buildID string) (*buildResponse, error) {
 	br := new(buildResponse)
-	getBuildAPI := conf.APIURL + "/v4/builds/" + buildID + "?token=" + conf.SDJWT
+	getBuildAPI := sdctlContext.APIURL + "/v4/builds/" + buildID + "?token=" + sdctlContext.SDJWT
 
 	req, err := http.NewRequest("GET", getBuildAPI, nil)
 	if err != nil {
@@ -264,9 +264,9 @@ func getBuilds(conf config.SdctlConfig, buildID string) (*buildResponse, error) 
 	return br, err
 }
 
-func getEvents(conf config.SdctlConfig, eventID int) (*eventResponse, error) {
+func getEvents(sdctlContext sdctl_context.SdctlContext, eventID int) (*eventResponse, error) {
 	er := new(eventResponse)
-	getBuildAPI := conf.APIURL + "/v4/events/" + strconv.Itoa(eventID) + "?token=" + conf.SDJWT
+	getBuildAPI := sdctlContext.APIURL + "/v4/events/" + strconv.Itoa(eventID) + "?token=" + sdctlContext.SDJWT
 
 	req, err := http.NewRequest("GET", getBuildAPI, nil)
 	if err != nil {
