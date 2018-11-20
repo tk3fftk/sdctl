@@ -16,7 +16,7 @@ var configFileName = ".sdctl"
 
 func failureExit(err error) {
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
 	}
 	os.Exit(1)
 }
@@ -44,6 +44,10 @@ func main() {
 		failureExit(err)
 	}
 	sdctx := config.SdctlContexts[config.CurrentContext]
+	api, err := sdapi.New(sdctx)
+	if err != nil {
+		failureExit(err)
+	}
 
 	app := cli.NewApp()
 	app.Name = "sdctl"
@@ -91,8 +95,7 @@ func main() {
 						}
 						buildID := c.Args().Get(0)
 
-						api := sdapi.New()
-						if err := api.GetPipelinePageFromBuildID(sdctx, buildID); err != nil {
+						if err := api.GetPipelinePageFromBuildID(buildID); err != nil {
 							failureExit(err)
 						}
 						return nil
@@ -133,12 +136,11 @@ func main() {
 					Name:  "jwt",
 					Usage: "get and store jwt locally",
 					Action: func(c *cli.Context) error {
-						api := sdapi.New()
 						// TODO handle it in sdapi.go
 						if sdctx.UserToken == "" {
 							failureExit(errors.New("you must set user token before getting JWT"))
 						}
-						token, err := api.GetJwt(sdctx)
+						token, err := api.GetJWT()
 						if err != nil {
 							failureExit(err)
 						}
@@ -201,8 +203,7 @@ func main() {
 				if len(c.Args()) != 2 {
 					return cli.ShowAppHelp(c)
 				}
-				api := sdapi.New()
-				if err := api.PostEvent(sdctx, c.Args().Get(0), c.Args().Get(1), false); err != nil {
+				if err := api.PostEvent(c.Args().Get(0), c.Args().Get(1), false); err != nil {
 					failureExit(err)
 				}
 				return nil
@@ -222,8 +223,7 @@ func main() {
 				if err != nil {
 					failureExit(err)
 				}
-				api := sdapi.New()
-				if err := api.Validator(sdctx, yaml, false); err != nil {
+				if err := api.Validator(yaml, false); err != nil {
 					failureExit(err)
 				}
 
@@ -244,8 +244,7 @@ func main() {
 				if err != nil {
 					failureExit(err)
 				}
-				api := sdapi.New()
-				if err := api.ValidatorTemplate(sdctx, yaml, false); err != nil {
+				if err := api.ValidatorTemplate(yaml, false); err != nil {
 					failureExit(err)
 				}
 				return nil

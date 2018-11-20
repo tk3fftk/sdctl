@@ -2,11 +2,13 @@ package sdapi
 
 import (
 	"bytes"
-	"crypto/tls"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,18 +16,14 @@ import (
 	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
 )
 
-var transport = &http.Transport{
-	TLSClientConfig: &tls.Config{},
+type Client struct {
+	URL        *url.URL
+	HTTPClient *http.Client
 }
-var client = &http.Client{Transport: transport}
 
-// SDAPI wraps Screwdriver.cd API
-type SDAPI interface {
-	GetJwt(conf sdctl_context.SdctlContext) (string, error)
-	PostEvent(conf sdctl_context.SdctlContext, pipelineID string, startFrom string, retry bool) error
-	Validator(conf sdctl_context.SdctlContext, yaml string, retry bool) error
-	ValidatorTemplate(conf sdctl_context.SdctlContext, yaml string, retry bool) error
-	GetPipelinePageFromBuildID(conf sdctl_context.SdctlContext, buildID string) error
+type SDAPI struct {
+	client *Client
+	sdctx  sdctl_context.SdctlContext
 }
 
 type validatorResponse struct {
@@ -60,99 +58,122 @@ type eventResponse struct {
 	PipelineID int `json:"pipelineId"`
 }
 
-type sdapi struct{}
-
-// New creates a SDAPI instance
-func New() SDAPI {
-	s := sdapi{}
-	return SDAPI(s)
+// New creates a SDAPI
+func New(sdctx sdctl_context.SdctlContext) (SDAPI, error) {
+	u, err := url.Parse(sdctx.APIURL)
+	if err != nil {
+		return SDAPI{}, err
+	}
+	c := &Client{
+		URL:        u,
+		HTTPClient: &http.Client{},
+	}
+	s := SDAPI{
+		client: c,
+		sdctx:  sdctx,
+	}
+	return s, nil
 }
 
-func (sd sdapi) GetJwt(sdctlContext sdctl_context.SdctlContext) (string, error) {
-	jwt := new(tokenResponse)
-	u := sdctlContext.APIURL + "/v4/auth/token?api_token=" + sdctlContext.UserToken
-	req, err := http.NewRequest("GET", u, nil)
+func (sd *SDAPI) request(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
+	url, err := sd.client.URL.Parse(path)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(method, url.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	switch method {
+	case "GET":
+		{
+			req.Header.Add("Accept", "application/json")
+		}
+	case "POST":
+		{
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("Authorization", "Bearer "+sd.sdctx.SDJWT)
+		}
+	}
+
+	res, err := sd.client.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	} else if res.StatusCode/200 != 1 {
+		return nil, errors.New("status code " + strconv.Itoa(res.StatusCode))
+	}
+
+	return res, nil
+}
+
+func (sd *SDAPI) GetJWT() (string, error) {
+	path := "/v4/auth/token?api_token=" + sd.sdctx.UserToken
+	res, err := sd.request(context.TODO(), "GET", path, nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Add("Accept", "application/json")
-	res, err := client.Do(req)
-	if res.StatusCode != 200 {
-		return "", errors.New(strconv.Itoa(res.StatusCode))
-	} else if err != nil {
-		return "", err
-	}
-
 	defer res.Body.Close()
 
-	err = json.NewDecoder(res.Body).Decode(jwt)
+	tokenResponse := new(tokenResponse)
+	err = json.NewDecoder(res.Body).Decode(tokenResponse)
 
-	return jwt.JWT, err
+	return tokenResponse.JWT, err
 }
 
-func (sd sdapi) PostEvent(sdctlContext sdctl_context.SdctlContext, pipelineID string, startFrom string, retry bool) error {
-	u := sdctlContext.APIURL + "/v4/events"
-	b := map[string]string{
+func (sd *SDAPI) PostEvent(pipelineID string, startFrom string, retried bool) error {
+	path := "/v4/events"
+	body := map[string]string{
 		"pipelineId": pipelineID,
 		"startFrom":  startFrom,
 	}
-	jsonBody, _ := json.Marshal(b)
-	req, err := http.NewRequest("POST", u, bytes.NewBuffer(jsonBody))
+	jsonBody, _ := json.Marshal(body)
+
+	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(jsonBody)))
 	if err != nil {
 		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+sdctlContext.SDJWT)
-	res, err := client.Do(req)
-	if res.StatusCode != 201 {
-		if retry {
+	} else if res.StatusCode != 201 {
+		if retried {
 			return errors.New(strconv.Itoa(res.StatusCode))
 		}
-		sdctlContext.SDJWT, err = sd.GetJwt(sdctlContext)
+		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
 			return err
 		}
-		return sd.PostEvent(sdctlContext, pipelineID, startFrom, true)
-	} else if err != nil {
-		return err
+		return sd.PostEvent(pipelineID, startFrom, true)
 	}
+	defer res.Body.Close()
 
 	return nil
 }
 
-func (sd sdapi) Validator(sdctlContext sdctl_context.SdctlContext, yaml string, retry bool) error {
-	vr := new(validatorResponse)
-	u := sdctlContext.APIURL + "/v4/validator"
-	b := `{"yaml":` + yaml + `}`
+func (sd *SDAPI) Validator(yaml string, retried bool) error {
+	path := "/v4/validator"
+	body := `{"yaml":` + yaml + `}`
 
-	req, err := http.NewRequest("POST", u, bytes.NewBuffer([]byte(b)))
+	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(body)))
 	if err != nil {
 		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+sdctlContext.SDJWT)
-	res, err := client.Do(req)
-	if res.StatusCode != 200 {
-		if retry {
+	} else if res.StatusCode != 200 {
+		if retried {
 			return errors.New(strconv.Itoa(res.StatusCode))
 		}
-		sdctlContext.SDJWT, err = sd.GetJwt(sdctlContext)
+		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
 			return err
 		}
-		return sd.Validator(sdctlContext, yaml, true)
-	} else if err != nil {
-		return err
+		return sd.Validator(yaml, true)
 	}
-
 	defer res.Body.Close()
 
-	err = json.NewDecoder(res.Body).Decode(vr)
+	validatorResponse := new(validatorResponse)
+	err = json.NewDecoder(res.Body).Decode(validatorResponse)
 	if err != nil {
 		return err
 	}
-	if len(vr.Errors) != 0 {
-		return errors.New(vr.Errors[0])
+	if len(validatorResponse.Errors) != 0 {
+		return errors.New(validatorResponse.Errors[0])
 	}
 
 	println("🙆")
@@ -160,33 +181,26 @@ func (sd sdapi) Validator(sdctlContext sdctl_context.SdctlContext, yaml string, 
 	return nil
 }
 
-func (sd sdapi) ValidatorTemplate(sdctlContext sdctl_context.SdctlContext, yaml string, retry bool) error {
-	tvr := new(templateValidatorResponse)
-	u := sdctlContext.APIURL + "/v4/validator/template"
-	b := `{"yaml":` + yaml + `}`
+func (sd *SDAPI) ValidatorTemplate(yaml string, retried bool) error {
+	path := "/v4/validator/template"
+	body := `{"yaml":` + yaml + `}`
 
-	req, err := http.NewRequest("POST", u, bytes.NewBuffer([]byte(b)))
+	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(body)))
 	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+sdctlContext.SDJWT)
-	res, err := client.Do(req)
-	if res.StatusCode != 200 {
-		if retry {
+		return nil
+	} else if res.StatusCode != 200 {
+		if retried {
 			return errors.New(strconv.Itoa(res.StatusCode))
 		}
-		sdctlContext.SDJWT, err = sd.GetJwt(sdctlContext)
+		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
 			return err
 		}
-		return sd.ValidatorTemplate(sdctlContext, yaml, true)
-	} else if err != nil {
-		return err
+		return sd.ValidatorTemplate(yaml, true)
 	}
-
 	defer res.Body.Close()
 
+	tvr := new(templateValidatorResponse)
 	err = json.NewDecoder(res.Body).Decode(tvr)
 	if err != nil {
 		return err
@@ -205,7 +219,7 @@ func (sd sdapi) ValidatorTemplate(sdctlContext sdctl_context.SdctlContext, yaml 
 	return nil
 }
 
-func (sd sdapi) GetPipelinePageFromBuildID(sdctlContext sdctl_context.SdctlContext, buildID string) error {
+func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 	buildIDList := strings.Split(strings.Replace(strings.TrimSpace(buildID), "\n", " ", -1), " ")
 	buildIDLength := len(buildIDList)
 
@@ -218,17 +232,17 @@ func (sd sdapi) GetPipelinePageFromBuildID(sdctlContext sdctl_context.SdctlConte
 		go func(b string) {
 			defer wg.Done()
 
-			br, err := getBuilds(sdctlContext, b)
+			br, err := sd.getBuilds(b)
 			if err != nil {
 				exit <- err
 				return
 			}
-			er, err := getEvents(sdctlContext, br.EventID)
+			er, err := sd.getEvents(br.EventID)
 			if err != nil {
 				exit <- err
 				return
 			}
-			println(strings.Replace(sdctlContext.APIURL, "api-cd", "cd", 1) + "/pipelines/" + strconv.Itoa(er.PipelineID) + "/builds/" + b)
+			println(strings.Replace(sd.sdctx.APIURL, "api-cd", "cd", 1) + "/pipelines/" + strconv.Itoa(er.PipelineID) + "/builds/" + b)
 		}(b)
 	}
 
@@ -242,46 +256,30 @@ func (sd sdapi) GetPipelinePageFromBuildID(sdctlContext sdctl_context.SdctlConte
 	}
 }
 
-func getBuilds(sdctlContext sdctl_context.SdctlContext, buildID string) (*buildResponse, error) {
-	br := new(buildResponse)
-	getBuildAPI := sdctlContext.APIURL + "/v4/builds/" + buildID + "?token=" + sdctlContext.SDJWT
-
-	req, err := http.NewRequest("GET", getBuildAPI, nil)
+func (sd *SDAPI) getBuilds(buildID string) (*buildResponse, error) {
+	path := "/v4/builds/" + buildID + "?token=" + sd.sdctx.SDJWT
+	res, err := sd.request(context.TODO(), "GET", path, nil)
 	if err != nil {
-		return br, err
-	}
-
-	res, err := client.Do(req)
-	if res.StatusCode != 200 {
-		return br, errors.New(strconv.Itoa(res.StatusCode))
-	} else if err != nil {
-		return br, err
+		return nil, err
 	}
 	defer res.Body.Close()
 
-	err = json.NewDecoder(res.Body).Decode(br)
+	buildResponse := new(buildResponse)
+	err = json.NewDecoder(res.Body).Decode(buildResponse)
 
-	return br, err
+	return buildResponse, err
 }
 
-func getEvents(sdctlContext sdctl_context.SdctlContext, eventID int) (*eventResponse, error) {
-	er := new(eventResponse)
-	getBuildAPI := sdctlContext.APIURL + "/v4/events/" + strconv.Itoa(eventID) + "?token=" + sdctlContext.SDJWT
-
-	req, err := http.NewRequest("GET", getBuildAPI, nil)
+func (sd *SDAPI) getEvents(eventID int) (*eventResponse, error) {
+	path := "/v4/events/" + strconv.Itoa(eventID) + "?token=" + sd.sdctx.SDJWT
+	res, err := sd.request(context.TODO(), "GET", path, nil)
 	if err != nil {
-		return er, err
-	}
-
-	res, err := client.Do(req)
-	if res.StatusCode != 200 {
-		return er, errors.New(strconv.Itoa(res.StatusCode))
-	} else if err != nil {
-		return er, err
+		return nil, err
 	}
 	defer res.Body.Close()
 
-	err = json.NewDecoder(res.Body).Decode(er)
+	eventResponse := new(eventResponse)
+	err = json.NewDecoder(res.Body).Decode(eventResponse)
 
-	return er, err
+	return eventResponse, err
 }
