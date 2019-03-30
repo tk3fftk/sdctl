@@ -1,0 +1,5 @@
+{
+  "statusCode": 500,
+  "error": "Internal Server Error",
+  "message": "Cannot read property 'id' of null"
+}

@@ -41,7 +41,7 @@ type templateValidatorResponse struct {
 
 type templateValidateError struct {
 	Message string      `json:"message"`
-	Path    string      `json:"path"`
+	Path    []string    `json:"path"`
 	Type    string      `json:"type"`
 	Context interface{} `json:"context"`
 }
@@ -59,15 +59,20 @@ type eventResponse struct {
 }
 
 // New creates a SDAPI
-func New(sdctx sdctl_context.SdctlContext) (SDAPI, error) {
+func New(sdctx sdctl_context.SdctlContext, httpClient *http.Client) (SDAPI, error) {
 	u, err := url.Parse(sdctx.APIURL)
 	if err != nil {
 		return SDAPI{}, err
 	}
+
 	c := &Client{
 		URL:        u,
-		HTTPClient: &http.Client{},
+		HTTPClient: http.DefaultClient,
 	}
+	if httpClient != nil {
+		c.HTTPClient = httpClient
+	}
+
 	s := SDAPI{
 		client: c,
 		sdctx:  sdctx,
@@ -77,6 +82,7 @@ func New(sdctx sdctl_context.SdctlContext) (SDAPI, error) {
 
 func (sd *SDAPI) request(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
 	url, err := sd.client.URL.Parse(path)
+
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +105,11 @@ func (sd *SDAPI) request(ctx context.Context, method, path string, body io.Reade
 	}
 
 	res, err := sd.client.HTTPClient.Do(req)
+
 	if err != nil {
 		return nil, err
-	} else if res.StatusCode/200 != 1 {
-		return nil, errors.New("status code " + strconv.Itoa(res.StatusCode))
+	} else if res.StatusCode/200 != 1 { // 2xx are accepted
+		return res, errors.New("status code " + strconv.Itoa(res.StatusCode))
 	}
 
 	return res, nil
@@ -128,14 +135,15 @@ func (sd *SDAPI) PostEvent(pipelineID string, startFrom string, retried bool) er
 		"pipelineId": pipelineID,
 		"startFrom":  startFrom,
 	}
-	jsonBody, _ := json.Marshal(body)
-
-	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(jsonBody)))
+	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return err
-	} else if res.StatusCode != 201 {
+	}
+
+	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(jsonBody)))
+	if res.StatusCode != 201 { // 201 is expected as a result of POST /events
 		if retried {
-			return errors.New(strconv.Itoa(res.StatusCode))
+			return err
 		}
 		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
@@ -153,11 +161,9 @@ func (sd *SDAPI) Validator(yaml string, retried bool) error {
 	body := `{"yaml":` + yaml + `}`
 
 	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(body)))
-	if err != nil {
-		return err
-	} else if res.StatusCode != 200 {
+	if res.StatusCode != 200 {
 		if retried {
-			return errors.New(strconv.Itoa(res.StatusCode))
+			return err
 		}
 		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
@@ -176,7 +182,7 @@ func (sd *SDAPI) Validator(yaml string, retried bool) error {
 		return errors.New(validatorResponse.Errors[0])
 	}
 
-	println("🙆")
+	println("Your screwdriver.yaml is valid🙆")
 
 	return nil
 }
@@ -186,11 +192,9 @@ func (sd *SDAPI) ValidatorTemplate(yaml string, retried bool) error {
 	body := `{"yaml":` + yaml + `}`
 
 	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(body)))
-	if err != nil {
-		return nil
-	} else if res.StatusCode != 200 {
+	if res.StatusCode != 200 {
 		if retried {
-			return errors.New(strconv.Itoa(res.StatusCode))
+			return err
 		}
 		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
@@ -206,15 +210,13 @@ func (sd *SDAPI) ValidatorTemplate(yaml string, retried bool) error {
 		return err
 	}
 	if len(tvr.Errors) != 0 {
-		i := 0
-		for i < len(tvr.Errors) {
+		for i := 0; i < len(tvr.Errors); i++ {
 			fmt.Printf("%v\n", tvr.Errors[i].Message)
-			i++
 		}
 		return errors.New("invalid template of Screwdriver.cd")
 	}
 
-	println("🙆")
+	println("Your template is valid🙆")
 
 	return nil
 }

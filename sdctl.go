@@ -44,7 +44,7 @@ func main() {
 		failureExit(err)
 	}
 	sdctx := config.SdctlContexts[config.CurrentContext]
-	api, err := sdapi.New(sdctx)
+	api, err := sdapi.New(sdctx, nil)
 	if err != nil {
 		failureExit(err)
 	}
