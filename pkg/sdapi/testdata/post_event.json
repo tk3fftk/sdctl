@@ -1,0 +1,42 @@
+{
+  "id": 2127883,
+  "causeMessage": "Started by github.com:tk3fftk",
+  "commit": {
+    "author": {
+      "avatar": "some avatar url",
+      "name": "Hiroki tktk",
+      "username": "tk3fftk",
+      "url": "https://github.com/tk3fftk"
+    },
+    "message": "commit message",
+    "url": "https://github.com/tk3fftk/test/commit/7ecba5c183bdfd1e77c70209bea750b9428dd123"
+  },
+  "createTime": "2019-03-30T13:08:41.790Z",
+  "creator": {
+    "avatar": "some avatar url",
+    "name": "Hiroki tktk",
+    "username": "tk3fftk",
+    "url": "https://github.com/tk3fftk"
+  },
+  "meta": {},
+  "pipelineId": 20625,
+  "sha": "7ecba5c183bdfd1e77c70209bea750b9428dd123",
+  "startFrom": "main",
+  "type": "pipeline",
+  "workflowGraph": {
+    "nodes": [
+      {
+        "name": "~pr"
+      },
+      {
+        "name": "~commit"
+      },
+      {
+        "name": "main",
+        "id": 113109
+      }
+    ],
+    "edges": []
+  },
+  "pr": {}
+}

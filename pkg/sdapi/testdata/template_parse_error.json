@@ -1,0 +1,83 @@
+{
+  "errors": [
+    {
+      "message": "\"name\" is required",
+      "path": [
+        "name"
+      ],
+      "type": "any.required",
+      "context": {
+        "key": "name",
+        "label": "name"
+      }
+    },
+    {
+      "message": "\"version\" is required",
+      "path": [
+        "version"
+      ],
+      "type": "any.required",
+      "context": {
+        "key": "version",
+        "label": "version"
+      }
+    },
+    {
+      "message": "\"description\" is required",
+      "path": [
+        "description"
+      ],
+      "type": "any.required",
+      "context": {
+        "key": "description",
+        "label": "description"
+      }
+    },
+    {
+      "message": "\"maintainer\" is required",
+      "path": [
+        "maintainer"
+      ],
+      "type": "any.required",
+      "context": {
+        "key": "maintainer",
+        "label": "maintainer"
+      }
+    },
+    {
+      "message": "\"config\" is required",
+      "path": [
+        "config"
+      ],
+      "type": "any.required",
+      "context": {
+        "key": "config",
+        "label": "config"
+      }
+    },
+    {
+      "message": "\"jobs\" is not allowed",
+      "path": [
+        "jobs"
+      ],
+      "type": "object.allowUnknown",
+      "context": {
+        "child": "jobs",
+        "key": "jobs",
+        "label": "jobs"
+      }
+    }
+  ],
+  "template": {
+    "jobs": {
+      "main": {
+        "image": "node:10",
+        "steps": [
+          {
+            "echo": "echo hoge"
+          }
+        ]
+      }
+    }
+  }
+}
