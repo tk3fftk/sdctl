@@ -101,6 +101,21 @@ func main() {
 						return nil
 					},
 				},
+				{
+					Name:  "banner",
+					Usage: "get sd banners",
+					Action: func(c *cli.Context) error {
+						banners, err := api.GetBanners()
+						if err != nil {
+							failureExit(err)
+						}
+						fmt.Println("ID\tIsActive\tMessage")
+						for _, b := range banners {
+							fmt.Printf("%v\t%v\t%v\n", b.ID, b.IsActive, b.Message)
+						}
+						return nil
+					},
+				},
 			},
 		},
 		{
@@ -148,6 +163,51 @@ func main() {
 						config.SetParam(sdctl_context.SDJWTKey, token, nil)
 						config.Update(configPath)
 						println("Bearer " + token)
+						return nil
+					},
+				},
+				{
+					Name:  "banner",
+					Usage: "update sd banner.",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "id, i",
+							Usage: "banner `ID` when update",
+						},
+						cli.StringFlag{
+							Name:  "msg, m",
+							Usage: "banner `MESSAGE` body (required)",
+						},
+						cli.StringFlag{
+							Name:  "type, t",
+							Usage: "banner `TYPE`",
+							Value: "info",
+						},
+						cli.StringFlag{
+							Name:  "isActive, a",
+							Usage: "banner status `FLAG`",
+							Value: "true",
+						},
+						cli.BoolFlag{
+							Name:  "delete, d",
+							Usage: "delete banner with id",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						id := c.String("id")
+						msg := c.String("msg")
+						bannerType := c.String("type")
+						isActive := c.String("isActive")
+						delete := c.Bool("delete")
+
+						if msg == "" && id == "" {
+							return cli.ShowAppHelp(c)
+						}
+
+						_, err := api.UpdateBanner(id, msg, bannerType, isActive, delete, false)
+						if err != nil {
+							failureExit(err)
+						}
 						return nil
 					},
 				},

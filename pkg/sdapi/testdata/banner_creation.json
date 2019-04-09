@@ -1,0 +1,8 @@
+{
+  "id": 13,
+  "message": "Due to planned upgrade of Kubernetes, Screwdriver will be down",
+  "isActive": false,
+  "createTime": "2019-07-18T14:31:26.488Z",
+  "createdBy": "tk3fftk",
+  "type": "info"
+}

@@ -1,0 +1,20 @@
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "\"Create Banner\" must be an object",
+  "data": {
+    "isJoi": true,
+    "name": "ValidationError",
+    "details": [
+      {
+        "message": "\"Create Banner\" must be an object",
+        "path": [],
+        "type": "object.base",
+        "context": {
+          "label": "Create Banner"
+        }
+      }
+    ],
+    "_object": null
+  }
+}

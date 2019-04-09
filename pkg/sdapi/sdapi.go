@@ -54,6 +54,15 @@ type eventResponse struct {
 	PipelineID int `json:"pipelineId"`
 }
 
+type bannerResponse struct {
+	ID         int    `json:"id"`
+	Message    string `json:"message"`
+	IsActive   bool   `json:"isActive"`
+	CreateTime string `json:"createTime"`
+	CreatedBy  string `json:"createdBy"`
+	Type       string `json:"type"`
+}
+
 // New creates a SDAPI
 func New(sdctx sdctl_context.SdctlContext, httpClient *http.Client) (SDAPI, error) {
 	u, err := url.Parse(sdctx.APIURL)
@@ -93,7 +102,7 @@ func (sd *SDAPI) request(ctx context.Context, method, path string, body io.Reade
 		{
 			req.Header.Add("Accept", "application/json")
 		}
-	case http.MethodPost:
+	case http.MethodPost, http.MethodPut, http.MethodDelete:
 		{
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("Authorization", "Bearer "+sd.sdctx.SDJWT)
@@ -118,6 +127,73 @@ func (sd *SDAPI) GetJWT() (string, error) {
 	err = json.NewDecoder(res.Body).Decode(tokenResponse)
 
 	return tokenResponse.JWT, err
+}
+
+func (sd *SDAPI) GetBanners() ([]bannerResponse, error) {
+	path := "/v4/banners"
+	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
+	if err != nil {
+		return []bannerResponse{}, err
+	}
+	defer res.Body.Close()
+
+	banners := new([]bannerResponse)
+	err = json.NewDecoder(res.Body).Decode(banners)
+
+	return *banners, err
+}
+
+func (sd *SDAPI) UpdateBanner(id, message, bannerType, isActive string, delete, retried bool) (bannerResponse, error) {
+	path := "/v4/banners"
+	method := http.MethodPost
+	banner := new(bannerResponse)
+
+	body := map[string]string{
+		"type":     bannerType,
+		"isActive": isActive,
+	}
+	if message != "" {
+		body["message"] = message
+	}
+	if id != "" {
+		method = http.MethodPut
+		path = path + "/" + id
+		if delete {
+			method = http.MethodDelete
+		}
+	}
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return *banner, err
+	}
+
+	res, err := sd.request(context.TODO(), method, path, bytes.NewBuffer([]byte(jsonBody)))
+	if err != nil {
+		return *banner, err
+	}
+	defer res.Body.Close()
+
+	switch res.StatusCode {
+	case http.StatusOK, http.StatusCreated:
+	case http.StatusNoContent:
+		return *banner, nil
+	case http.StatusNotFound:
+		return *banner, fmt.Errorf("banner of ID %v is not found", id)
+	default:
+		if retried {
+			return *banner, fmt.Errorf("status code should be %d or %d, but actual is %d", http.StatusCreated, http.StatusOK, res.StatusCode)
+		}
+		sd.sdctx.SDJWT, err = sd.GetJWT()
+		if err != nil {
+			return *banner, err
+		}
+		return sd.UpdateBanner(id, message, bannerType, isActive, delete, true)
+	}
+
+	err = json.NewDecoder(res.Body).Decode(banner)
+
+	return *banner, err
 }
 
 func (sd *SDAPI) PostEvent(pipelineID string, startFrom string, retried bool) error {
