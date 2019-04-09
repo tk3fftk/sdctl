@@ -13,5 +13,5 @@ jobs:
       - go_get: go get ./...
       - go_vet: go vet ./...
       - gofmt: (! gofmt -s -d . | grep '^')
-      - test: go test ./... -coverprofile=${SD_ARTIFACTS_DIR}/coverage.out -coverpkg=./... -v
+      - test: go test ./... -coverprofile=${SD_ARTIFACTS_DIR}/coverage.out -cover -v
       - build: go build
