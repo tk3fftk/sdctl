@@ -114,7 +114,7 @@ func (sd *SDAPI) GetJWT() (string, error) {
 		return "", err
 	}
 	if res.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("status code should be %d, but actual is%d", http.StatusOK, res.StatusCode)
+		return "", fmt.Errorf("status code should be %d, but actual is %d", http.StatusOK, res.StatusCode)
 	}
 	defer res.Body.Close()
 
@@ -141,7 +141,7 @@ func (sd *SDAPI) PostEvent(pipelineID string, startFrom string, retried bool) er
 	}
 	if res.StatusCode != http.StatusCreated { // 201 is expected as a result of POST /events
 		if retried {
-			return fmt.Errorf("status code should be %d, but actual is%d", http.StatusCreated, res.StatusCode)
+			return fmt.Errorf("status code should be %d, but actual is %d", http.StatusCreated, res.StatusCode)
 		}
 		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
@@ -164,7 +164,7 @@ func (sd *SDAPI) Validator(yaml string, retried bool) error {
 	}
 	if res.StatusCode != http.StatusOK {
 		if retried {
-			return fmt.Errorf("status code should be %d, but actual is%d", http.StatusOK, res.StatusCode)
+			return fmt.Errorf("status code should be %d, but actual is %d", http.StatusOK, res.StatusCode)
 		}
 		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
@@ -198,7 +198,7 @@ func (sd *SDAPI) ValidatorTemplate(yaml string, retried bool) error {
 	}
 	if res.StatusCode != http.StatusOK {
 		if retried {
-			return fmt.Errorf("status code should be %d, but actual is%d", http.StatusOK, res.StatusCode)
+			return fmt.Errorf("status code should be %d, but actual is %d", http.StatusOK, res.StatusCode)
 		}
 		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
