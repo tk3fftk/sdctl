@@ -93,11 +93,11 @@ func (sd *SDAPI) request(ctx context.Context, method, path string, body io.Reade
 	}
 
 	switch method {
-	case "GET":
+	case http.MethodGet:
 		{
 			req.Header.Add("Accept", "application/json")
 		}
-	case "POST":
+	case http.MethodPost:
 		{
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("Authorization", "Bearer "+sd.sdctx.SDJWT)
@@ -117,7 +117,7 @@ func (sd *SDAPI) request(ctx context.Context, method, path string, body io.Reade
 
 func (sd *SDAPI) GetJWT() (string, error) {
 	path := "/v4/auth/token?api_token=" + sd.sdctx.UserToken
-	res, err := sd.request(context.TODO(), "GET", path, nil)
+	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
 	if err != nil {
 		return "", err
 	}
@@ -140,8 +140,8 @@ func (sd *SDAPI) PostEvent(pipelineID string, startFrom string, retried bool) er
 		return err
 	}
 
-	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(jsonBody)))
-	if res.StatusCode != 201 { // 201 is expected as a result of POST /events
+	res, err := sd.request(context.TODO(), http.MethodPost, path, bytes.NewBuffer([]byte(jsonBody)))
+	if res.StatusCode != http.StatusCreated { // 201 is expected as a result of POST /events
 		if retried {
 			return err
 		}
@@ -160,8 +160,8 @@ func (sd *SDAPI) Validator(yaml string, retried bool) error {
 	path := "/v4/validator"
 	body := `{"yaml":` + yaml + `}`
 
-	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(body)))
-	if res.StatusCode != 200 {
+	res, err := sd.request(context.TODO(), http.MethodPost, path, bytes.NewBuffer([]byte(body)))
+	if res.StatusCode != http.StatusOK {
 		if retried {
 			return err
 		}
@@ -191,8 +191,8 @@ func (sd *SDAPI) ValidatorTemplate(yaml string, retried bool) error {
 	path := "/v4/validator/template"
 	body := `{"yaml":` + yaml + `}`
 
-	res, err := sd.request(context.TODO(), "POST", path, bytes.NewBuffer([]byte(body)))
-	if res.StatusCode != 200 {
+	res, err := sd.request(context.TODO(), http.MethodPost, path, bytes.NewBuffer([]byte(body)))
+	if res.StatusCode != http.StatusOK {
 		if retried {
 			return err
 		}
@@ -260,7 +260,7 @@ func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 
 func (sd *SDAPI) getBuilds(buildID string) (*buildResponse, error) {
 	path := "/v4/builds/" + buildID + "?token=" + sd.sdctx.SDJWT
-	res, err := sd.request(context.TODO(), "GET", path, nil)
+	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +274,7 @@ func (sd *SDAPI) getBuilds(buildID string) (*buildResponse, error) {
 
 func (sd *SDAPI) getEvents(eventID int) (*eventResponse, error) {
 	path := "/v4/events/" + strconv.Itoa(eventID) + "?token=" + sd.sdctx.SDJWT
-	res, err := sd.request(context.TODO(), "GET", path, nil)
+	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
