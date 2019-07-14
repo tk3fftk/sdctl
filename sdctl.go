@@ -1,15 +1,13 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/user"
 
+	"github.com/tk3fftk/sdctl/command"
 	"github.com/tk3fftk/sdctl/pkg/sdapi"
 	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
-	"github.com/tk3fftk/sdctl/util"
-	"gopkg.in/urfave/cli.v1"
 )
 
 var configFileName = ".sdctl"
@@ -39,6 +37,7 @@ func main() {
 		failureExit(err)
 	}
 
+<<<<<<< HEAD
 	app := cli.NewApp()
 	app.Name = "sdctl"
 	app.Usage = "Screwdriver.cd API wrapper"
@@ -252,6 +251,10 @@ func main() {
 				return nil
 			},
 		},
+=======
+	cmd := command.NewCmd(config, api)
+	if err := cmd.Execute(); err != nil {
+		failureExit(err)
+>>>>>>> 4a069cb... use cobra
 	}
-	app.Run(os.Args)
 }
