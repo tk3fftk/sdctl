@@ -17,8 +17,8 @@ func NewCmdContextList(config sdctl_context.SdctlConfig) *cobra.Command {
 		Use:     "list",
 		Short:   "show context list",
 		Aliases: []string{"ls"},
-		Run: func(cmd *cobra.Command, args []string) {
-			o.Run(cmd, args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.Run(cmd, args)
 		},
 	}
 	return cmd

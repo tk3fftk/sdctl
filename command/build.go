@@ -17,8 +17,8 @@ func NewCmdBuild(api sdapi.SDAPI) *cobra.Command {
 		Use:     "build <pipelieid> <start_from>",
 		Short:   "start a job.",
 		Aliases: []string{"b"},
-		Run: func(cmd *cobra.Command, args []string) {
-			o.Run(cmd, args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.Run(cmd, args)
 		},
 	}
 	return cmd

@@ -17,8 +17,8 @@ func NewCmdGetBuildPages(api sdapi.SDAPI) *cobra.Command {
 		Use:     "build-pages <BUILD_ID>",
 		Short:   "get build page url",
 		Aliases: []string{"bp"},
-		Run: func(cmd *cobra.Command, args []string) {
-			o.Run(cmd, args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.Run(cmd, args)
 		},
 	}
 	return cmd

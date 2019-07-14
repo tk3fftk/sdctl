@@ -17,8 +17,8 @@ func NewCmdClear(config sdctl_context.SdctlConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clear",
 		Short: "clear your setting and set to default",
-		Run: func(cmd *cobra.Command, args []string) {
-			o.Run(cmd, args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.Run(cmd, args)
 		},
 	}
 	return cmd

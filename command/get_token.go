@@ -16,8 +16,8 @@ func NewCmdGetToken(config sdctl_context.SdctlConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "token",
 		Short: "get your user token",
-		Run: func(cmd *cobra.Command, args []string) {
-			o.Run(cmd, args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.Run(cmd, args)
 		},
 	}
 	return cmd

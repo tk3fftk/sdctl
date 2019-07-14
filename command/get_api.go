@@ -16,8 +16,8 @@ func NewCmdGetAPI(config sdctl_context.SdctlConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api",
 		Short: "get configured api url",
-		Run: func(cmd *cobra.Command, args []string) {
-			o.Run(cmd, args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.Run(cmd, args)
 		},
 	}
 	return cmd

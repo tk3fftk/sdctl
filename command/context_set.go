@@ -17,8 +17,8 @@ func NewCmdContextSet(config sdctl_context.SdctlConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set <context>",
 		Short: "set current to context. if it doesn't exist, create new one",
-		Run: func(cmd *cobra.Command, args []string) {
-			o.Run(cmd, args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.Run(cmd, args)
 		},
 	}
 	return cmd
