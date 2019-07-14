@@ -3,14 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/user"
 
 	"github.com/tk3fftk/sdctl/command"
 	"github.com/tk3fftk/sdctl/pkg/sdapi"
 	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
+	"github.com/tk3fftk/sdctl/util"
 )
-
-var configFileName = ".sdctl"
 
 func failureExit(err error) {
 	if err != nil {
@@ -21,13 +19,11 @@ func failureExit(err error) {
 
 func main() {
 
-	usr, err := user.Current()
+	configPATH, err := util.ConfigPATH()
 	if err != nil {
 		failureExit(err)
 	}
-
-	configPath := usr.HomeDir + "/" + configFileName
-	config, err := sdctl_context.LoadConfig(configPath, false)
+	config, err := sdctl_context.LoadConfig(configPATH, false)
 	if err != nil {
 		failureExit(err)
 	}
