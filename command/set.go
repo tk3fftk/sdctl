@@ -6,19 +6,18 @@ import (
 	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
 )
 
-func NewCmd(config sdctl_context.SdctlConfig, api sdapi.SDAPI) *cobra.Command {
+func NewCmdSet(config sdctl_context.SdctlConfig, api sdapi.SDAPI) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "sdctl",
-		Short:   "Screwdriver.cd API wrapper",
-		Long:    "validate yamls, start build locally",
-		Version: "0.1.0",
+		Use:   "set",
+		Short: "set sdctl settings",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
 	}
 
 	cmd.AddCommand(
-		NewCmdGet(config, api),
-		NewCmdSet(config, api))
+		NewCmdSetToken(config),
+		NewCmdSetAPI(config),
+		NewCmdSetJWT(config, api))
 	return cmd
 }
