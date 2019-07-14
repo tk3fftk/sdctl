@@ -1,32 +1,27 @@
 ## sd-cli
 
 ```
-NAME:
-   sdctl - Screwdriver.cd API wrapper
+validate yamls, start build locally
 
-USAGE:
-   validate yamls, start build locally
+Usage:
+  sdctl [flags]
+  sdctl [command]
 
-VERSION:
-   0.1.0
+Available Commands:
+  build             start a job.
+  clear             clear your setting and set to default
+  context           handle screwdriver contexts
+  get               get sdctl settings and Screwdriver.cd information
+  help              Help about any command
+  set               set sdctl settings
+  validate          validate your screwdriver.yaml, default to screwdriver.yaml
+  validate-template validate your sd-template.yaml, default to sd-template.yaml
 
-COMMANDS:
-     get                    get sdctl settings and Screwdriver.cd information
-     set                    set sdctl settings
-     context                handle screwdriver contexts
-     clear                  clear your setting and set to default
-     build, b               start a job. parameters: <pipelieid> <start_from> 
-     validate, v            validate your screwdriver.yaml, default to screwdriver.yaml
-     validate-template, vt  validate your sd-template.yaml, default to sd-template.yaml
-     help, h                Shows a list of commands or help for one command
+Flags:
+  -h, --help      help for sdctl
+      --version   version for sdctl
 
-GLOBAL OPTIONS:
-   --help, -h     show help
-   --version, -v  print the version
-
-COPYRIGHT:
-   tk3fftk
-
+Use "sdctl [command] --help" for more information about a command.
 ```
 
 ### Setup
