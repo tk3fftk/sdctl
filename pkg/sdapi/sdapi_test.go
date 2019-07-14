@@ -224,12 +224,22 @@ func TestPostEvent(t *testing.T) {
 func TestValidator(t *testing.T) {
 	cases := map[string]struct {
 		expectedHttpResult     bool
+		output                 bool
 		expectedResponse       string
 		expectedRetry          bool
 		expectedRetryResponse  string
 		expectedValidateResult bool
 	}{
 		"POST validate successfully": {
+			true,
+			false,
+			"testdata/validate.json",
+			false,
+			"",
+			true,
+		},
+		"POST validate successfully wich output": {
+			true,
 			true,
 			"testdata/validate.json",
 			false,
@@ -238,12 +248,14 @@ func TestValidator(t *testing.T) {
 		},
 		"Retry successfully after authorization": {
 			true,
+			false,
 			mockSDUnauthorizedResponse,
 			true,
 			"testdata/validate.json",
 			true,
 		},
 		"Failure with bad request": {
+			false,
 			false,
 			mockSDBadRequestResponse,
 			false,
@@ -252,12 +264,14 @@ func TestValidator(t *testing.T) {
 		},
 		"Failure with invalid yaml": {
 			true,
+			false,
 			"testdata/config_parse_error.json",
 			false,
 			"",
 			false,
 		},
 		"Failure with bad request after retrying": {
+			false,
 			false,
 			mockSDUnauthorizedResponse,
 			true,
@@ -307,7 +321,7 @@ func TestValidator(t *testing.T) {
 				t.Fatal("should not cause error")
 			}
 
-			err = sdapi.Validator(mockYaml, false)
+			err = sdapi.Validator(mockYaml, false, v.output)
 			switch v.expectedValidateResult {
 			case true:
 				if err != nil {

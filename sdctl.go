@@ -212,18 +212,23 @@ func main() {
 			Name:    "validate",
 			Aliases: []string{"v"},
 			Usage:   "validate your screwdriver.yaml, default to screwdriver.yaml",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "file, f",
+					Value: "screwdriver.yaml",
+					Usage: "specify pipeline file",
+				},
+				cli.BoolFlag{
+					Name:  "output",
+					Usage: "print velidator result",
+				},
+			},
 			Action: func(c *cli.Context) error {
-				var f string
-				if len(c.Args()) == 0 {
-					f = "screwdriver.yaml"
-				} else {
-					f = c.Args().Get(0)
-				}
-				yaml, err := readYaml(f)
+				yaml, err := readYaml(c.String("file"))
 				if err != nil {
 					failureExit(err)
 				}
-				if err := api.Validator(yaml, false); err != nil {
+				if err := api.Validator(yaml, false, c.Bool("output")); err != nil {
 					failureExit(err)
 				}
 
