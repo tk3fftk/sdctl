@@ -23,6 +23,7 @@ func NewCmd(config sdctl_context.SdctlConfig, api sdapi.SDAPI) *cobra.Command {
 		NewCmdContext(config, api),
 		NewCmdClear(config),
 		NewCmdBuild(api),
-		NewCmdValidate(api))
+		NewCmdValidate(api),
+		NewCmdValidateTemplate(api))
 	return cmd
 }
