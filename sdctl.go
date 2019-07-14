@@ -3,12 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 
 	"github.com/tk3fftk/sdctl/pkg/sdapi"
 	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
+	"github.com/tk3fftk/sdctl/util"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -19,16 +19,6 @@ func failureExit(err error) {
 		fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
 	}
 	os.Exit(1)
-}
-
-func readYaml(yamlPath string) (yaml string, err error) {
-	yamlFile, err := ioutil.ReadFile(yamlPath)
-	if err != nil {
-		return
-	}
-	yaml = fmt.Sprintf("%q", string(yamlFile[:]))
-
-	return
 }
 
 func main() {
@@ -219,12 +209,19 @@ func main() {
 					Usage: "specify pipeline file",
 				},
 				cli.BoolFlag{
-					Name:  "output",
+					Name:  "output, o",
 					Usage: "print velidator result",
 				},
 			},
 			Action: func(c *cli.Context) error {
 				yaml, err := readYaml(c.String("file"))
+				var f string
+				if len(c.Args()) == 0 {
+					f = "screwdriver.yaml"
+				} else {
+					f = c.Args().Get(0)
+				}
+				yaml, err := util.ReadYaml(f)
 				if err != nil {
 					failureExit(err)
 				}
@@ -245,7 +242,7 @@ func main() {
 				} else {
 					f = c.Args().Get(0)
 				}
-				yaml, err := readYaml(f)
+				yaml, err := util.ReadYaml(f)
 				if err != nil {
 					failureExit(err)
 				}
