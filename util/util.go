@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os/user"
 	"path/filepath"
@@ -12,8 +13,7 @@ func ReadYaml(yamlPath string) (yaml string, err error) {
 	if err != nil {
 		return
 	}
-	yaml = string(yamlFile)
-
+	yaml = fmt.Sprintf("%q", string(yamlFile[:]))
 	return
 }
 

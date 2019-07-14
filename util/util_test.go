@@ -1,6 +1,7 @@
 package util_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -36,5 +37,5 @@ func TestReadYaml(t *testing.T) {
 
 func readFile(path string) string {
 	b, _ := ioutil.ReadFile(path)
-	return string(b)
+	return fmt.Sprintf("%q", string(b[:]))
 }
