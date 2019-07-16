@@ -9,11 +9,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
+	"gopkg.in/yaml.v2"
 )
 
 type Client struct {
@@ -26,13 +28,7 @@ type SDAPI struct {
 	sdctx  sdctl_context.SdctlContext
 }
 
-type validatorResponse struct {
-	Annotations   interface{} `json:"annotations"`
-	Errors        []string    `json:"errors"`
-	Jobs          interface{} `json:"jobs"`
-	Workflow      []string    `json:"workflow"`
-	WorkflowGraph interface{} `json:"workflowGraph"`
-}
+type validatorResponse map[string]interface{}
 
 type templateValidatorResponse struct {
 	Template interface{}             `json:"template"`
@@ -154,9 +150,9 @@ func (sd *SDAPI) PostEvent(pipelineID string, startFrom string, retried bool) er
 	return nil
 }
 
-func (sd *SDAPI) Validator(yaml string, retried bool) error {
+func (sd *SDAPI) Validator(yamlStr string, retried bool, output bool) error {
 	path := "/v4/validator"
-	body := `{"yaml":` + yaml + `}`
+	body := `{"yaml":` + yamlStr + `}`
 
 	res, err := sd.request(context.TODO(), http.MethodPost, path, bytes.NewBuffer([]byte(body)))
 	if err != nil {
@@ -170,21 +166,25 @@ func (sd *SDAPI) Validator(yaml string, retried bool) error {
 		if err != nil {
 			return err
 		}
-		return sd.Validator(yaml, true)
+		return sd.Validator(yamlStr, true, output)
 	}
 	defer res.Body.Close()
 
-	validatorResponse := new(validatorResponse)
-	err = json.NewDecoder(res.Body).Decode(validatorResponse)
-	if err != nil {
+	var vr validatorResponse
+	if err := json.NewDecoder(res.Body).Decode(&vr); err != nil {
 		return err
 	}
-	if len(validatorResponse.Errors) != 0 {
-		return errors.New(validatorResponse.Errors[0])
+	if vr["errors"] != nil {
+		return fmt.Errorf("%v", vr["errors"])
 	}
 
-	println("Your screwdriver.yaml is valid🙆")
-
+	if output {
+		if err := yaml.NewEncoder(os.Stdout).Encode(vr); err != nil {
+			return err
+		}
+	} else {
+		fmt.Fprintln(os.Stdout, "Your screwdriver.yaml is valid🙆")
+	}
 	return nil
 }
 
