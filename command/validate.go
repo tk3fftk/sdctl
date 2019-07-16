@@ -11,6 +11,7 @@ type ValidateOption struct {
 }
 
 var pipelineFilePATH string
+var validatedOutput bool
 
 func NewCmdValidate(api sdapi.SDAPI) *cobra.Command {
 	o := &ValidateOption{
@@ -25,6 +26,8 @@ func NewCmdValidate(api sdapi.SDAPI) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&pipelineFilePATH, "file", "f", "screwdriver.yaml", "specify pipeline file path")
+	cmd.Flags().BoolVarP(&validatedOutput, "output", "o", false, "print velidator result")
+
 	return cmd
 }
 
@@ -33,7 +36,7 @@ func (o *ValidateOption) Run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := o.API.Validator(yaml, false); err != nil {
+	if err := o.API.Validator(yaml, false, validatedOutput); err != nil {
 		return err
 	}
 	return nil
