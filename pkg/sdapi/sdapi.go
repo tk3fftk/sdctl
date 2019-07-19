@@ -18,11 +18,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Client wraps HTTPClient
 type Client struct {
 	URL        *url.URL
 	HTTPClient *http.Client
 }
 
+// SDAPI has methods for control Screwdriver.cd APIs
 type SDAPI struct {
 	client *Client
 	sdctx  sdctl_context.SdctlContext
@@ -54,7 +56,8 @@ type eventResponse struct {
 	PipelineID int `json:"pipelineId"`
 }
 
-type bannerResponse struct {
+// BannerResponse represents Banner API response schema
+type BannerResponse struct {
 	ID         int    `json:"id"`
 	Message    string `json:"message"`
 	IsActive   bool   `json:"isActive"`
@@ -129,24 +132,24 @@ func (sd *SDAPI) GetJWT() (string, error) {
 	return tokenResponse.JWT, err
 }
 
-func (sd *SDAPI) GetBanners() ([]bannerResponse, error) {
+func (sd *SDAPI) GetBanners() ([]BannerResponse, error) {
 	path := "/v4/banners"
 	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
 	if err != nil {
-		return []bannerResponse{}, err
+		return []BannerResponse{}, err
 	}
 	defer res.Body.Close()
 
-	banners := new([]bannerResponse)
+	banners := new([]BannerResponse)
 	err = json.NewDecoder(res.Body).Decode(banners)
 
 	return *banners, err
 }
 
-func (sd *SDAPI) UpdateBanner(id, message, bannerType, isActive string, delete, retried bool) (bannerResponse, error) {
+func (sd *SDAPI) UpdateBanner(id, message, bannerType, isActive string, delete, retried bool) (BannerResponse, error) {
 	path := "/v4/banners"
 	method := http.MethodPost
-	banner := new(bannerResponse)
+	banner := new(BannerResponse)
 
 	body := map[string]string{
 		"type":     bannerType,
@@ -175,14 +178,17 @@ func (sd *SDAPI) UpdateBanner(id, message, bannerType, isActive string, delete, 
 	defer res.Body.Close()
 
 	switch res.StatusCode {
-	case http.StatusOK, http.StatusCreated:
+	case http.StatusCreated, http.StatusOK:
+		err = json.NewDecoder(res.Body).Decode(banner)
+		fmt.Fprintf(os.Stdout, "Successfully %v a banner ID %v\n", method, banner.ID)
 	case http.StatusNoContent:
-		return *banner, nil
+		fmt.Fprintf(os.Stdout, "Successfully %v a banner ID %v\n", method, id)
 	case http.StatusNotFound:
-		return *banner, fmt.Errorf("banner of ID %v is not found", id)
+		err = fmt.Errorf("banner of ID %v is not found", id)
 	default:
 		if retried {
-			return *banner, fmt.Errorf("status code should be %d or %d, but actual is %d", http.StatusCreated, http.StatusOK, res.StatusCode)
+			err = fmt.Errorf("status code should be %d or %d, but actual is %d", http.StatusCreated, http.StatusOK, res.StatusCode)
+			break
 		}
 		sd.sdctx.SDJWT, err = sd.GetJWT()
 		if err != nil {
@@ -190,8 +196,6 @@ func (sd *SDAPI) UpdateBanner(id, message, bannerType, isActive string, delete, 
 		}
 		return sd.UpdateBanner(id, message, bannerType, isActive, delete, true)
 	}
-
-	err = json.NewDecoder(res.Body).Decode(banner)
 
 	return *banner, err
 }

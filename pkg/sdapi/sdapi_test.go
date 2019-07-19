@@ -191,7 +191,7 @@ func TestGetBanners(t *testing.T) {
 }
 
 func TestUpdateBanner(t *testing.T) {
-	dummyId := "13"
+	dummyID := "13"
 	dummyMessage := "Due to planned upgrade of Kubernetes, Screwdriver will be down"
 	dummyIsActive := "false"
 	dummyType := "info"
@@ -215,25 +215,25 @@ func TestUpdateBanner(t *testing.T) {
 			false,
 		},
 		"Update a banner successfully": {
-			dummyId,
+			dummyID,
 			true,
 			"testdata/banner_patch.json",
 			false,
 		},
 		"Failed to update a banner": {
-			dummyId,
+			dummyID,
 			false,
 			"testdata/banner_not_found.json",
 			false,
 		},
 		"Delete a banner successfully": {
-			dummyId,
+			dummyID,
 			true,
 			"",
 			true,
 		},
 		"Failed to delete a banner": {
-			dummyId,
+			dummyID,
 			false,
 			"testdata/banner_not_found.json",
 			true,
@@ -270,21 +270,21 @@ func TestUpdateBanner(t *testing.T) {
 				t.Fatal("should not cause error")
 			}
 
-			banner, err := sdapi.UpdateBanner(dummyId, dummyMessage, dummyType, dummyIsActive, v.delete, false)
+			banner, err := sdapi.UpdateBanner(dummyID, dummyMessage, dummyType, dummyIsActive, v.delete, false)
 			switch v.expectedResult {
 			case true:
 				if err != nil {
 					t.Errorf("error should be nil but: '%v'", err)
 				}
 
-				expctedResponseJsonFile, err := ioutil.ReadFile(v.expectedResponse)
+				expctedResponseJSONFile, err := ioutil.ReadFile(v.expectedResponse)
 				if err != nil && !v.delete {
 					t.Fatal("should not cause error")
 				}
-				expectedResponseJson := new(bannerResponse)
-				err = json.Unmarshal(expctedResponseJsonFile, expectedResponseJson)
+				expectedResponseJSON := new(BannerResponse)
+				err = json.Unmarshal(expctedResponseJSONFile, expectedResponseJSON)
 
-				if diff := cmp.Diff(expectedResponseJson, &banner); diff != "" {
+				if diff := cmp.Diff(expectedResponseJSON, &banner); diff != "" {
 					t.Errorf("mismatch (-want +got):\n%s", diff)
 				}
 			case false:
@@ -395,7 +395,7 @@ func TestPostEvent(t *testing.T) {
 
 func TestValidator(t *testing.T) {
 	cases := map[string]struct {
-		expectedHttpResult     bool
+		expectedHTTPResult     bool
 		output                 bool
 		expectedResponse       string
 		expectedRetry          bool
@@ -468,7 +468,7 @@ func TestValidator(t *testing.T) {
 				if v.expectedRetry {
 					jwt := r.Header.Get("Authorization")
 					if jwt == "Bearer thisissdjwttoken" {
-						if !v.expectedHttpResult {
+						if !v.expectedHTTPResult {
 							w.WriteHeader(http.StatusInternalServerError)
 						}
 						http.ServeFile(w, r, v.expectedRetryResponse)
@@ -476,7 +476,7 @@ func TestValidator(t *testing.T) {
 					}
 					w.WriteHeader(http.StatusUnauthorized)
 				} else {
-					if !v.expectedHttpResult {
+					if !v.expectedHTTPResult {
 						w.WriteHeader(http.StatusInternalServerError)
 					}
 				}
@@ -512,7 +512,7 @@ func TestValidator(t *testing.T) {
 
 func TestValidatorTemplate(t *testing.T) {
 	cases := map[string]struct {
-		expectedHttpResult     bool
+		expectedHTTPResult     bool
 		expectedResponse       string
 		expectedRetry          bool
 		expectedRetryResponse  string
@@ -571,7 +571,7 @@ func TestValidatorTemplate(t *testing.T) {
 				if v.expectedRetry {
 					jwt := r.Header.Get("Authorization")
 					if jwt == "Bearer thisissdjwttoken" {
-						if !v.expectedHttpResult {
+						if !v.expectedHTTPResult {
 							w.WriteHeader(http.StatusInternalServerError)
 						}
 						http.ServeFile(w, r, v.expectedRetryResponse)
@@ -579,7 +579,7 @@ func TestValidatorTemplate(t *testing.T) {
 					}
 					w.WriteHeader(http.StatusUnauthorized)
 				} else {
-					if !v.expectedHttpResult {
+					if !v.expectedHTTPResult {
 						w.WriteHeader(http.StatusInternalServerError)
 					}
 				}
