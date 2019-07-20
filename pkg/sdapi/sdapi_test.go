@@ -1,11 +1,14 @@
 package sdapi
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/tk3fftk/sdctl/pkg/sdctl_context"
 )
 
@@ -126,6 +129,175 @@ func TestGetJWT(t *testing.T) {
 	}
 }
 
+func TestGetBanners(t *testing.T) {
+	cases := map[string]struct {
+		expectedResult   bool
+		expectedResponse string
+	}{
+		"Get banners successfully": {
+			true,
+			"testdata/banner.json",
+		},
+		"Get banners with failure": {
+			false,
+			mockSDBadRequestResponse,
+		},
+	}
+
+	for k, v := range cases {
+		k := k
+		v := v
+
+		t.Run(k, func(t *testing.T) {
+
+			muxAPI := http.NewServeMux()
+			testAPIServer := httptest.NewServer(muxAPI)
+			defer testAPIServer.Close()
+
+			path := "/v4/banners"
+			mockSDContext.APIURL = testAPIServer.URL
+			muxAPI.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				if !v.expectedResult {
+					w.WriteHeader(http.StatusUnauthorized)
+				}
+				http.ServeFile(w, r, v.expectedResponse)
+			})
+
+			sdapi, err := New(mockSDContext, nil)
+			if err != nil {
+				t.Fatal("should not cause error")
+			}
+
+			banners, err := sdapi.GetBanners()
+			switch v.expectedResult {
+			case true:
+				if err != nil {
+					t.Errorf("error should be nil but: '%v'", err)
+				}
+				b := banners[0]
+				expected := "Due to planned upgrade of Kubernetes, Screwdriver will be down"
+				if b.ID != 0 || b.Message != expected {
+					t.Errorf("response should be equal with dummy date but: '%v' and '%v'", b.ID, b.Message)
+				}
+			case false:
+				if err == nil {
+					t.Errorf("error should not be nil but nil")
+				} else {
+					fmt.Printf("%v\n", err)
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateBanner(t *testing.T) {
+	dummyID := "13"
+	dummyMessage := "Due to planned upgrade of Kubernetes, Screwdriver will be down"
+	dummyIsActive := "false"
+	dummyType := "info"
+
+	cases := map[string]struct {
+		id               string
+		expectedResult   bool
+		expectedResponse string
+		delete           bool
+	}{
+		"Create a banner successfully": {
+			"",
+			true,
+			"testdata/banner_creation.json",
+			false,
+		},
+		"Failed to create a banner": {
+			"",
+			false,
+			"testdata/bad_banner_creation.json",
+			false,
+		},
+		"Update a banner successfully": {
+			dummyID,
+			true,
+			"testdata/banner_patch.json",
+			false,
+		},
+		"Failed to update a banner": {
+			dummyID,
+			false,
+			"testdata/banner_not_found.json",
+			false,
+		},
+		"Delete a banner successfully": {
+			dummyID,
+			true,
+			"",
+			true,
+		},
+		"Failed to delete a banner": {
+			dummyID,
+			false,
+			"testdata/banner_not_found.json",
+			true,
+		},
+	}
+
+	for k, v := range cases {
+		k := k
+		v := v
+
+		t.Run(k, func(t *testing.T) {
+			muxAPI := http.NewServeMux()
+			testAPIServer := httptest.NewServer(muxAPI)
+			defer testAPIServer.Close()
+
+			path := "/v4/banners/" + v.id
+			mockSDContext.APIURL = testAPIServer.URL
+			muxAPI.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				if !v.expectedResult {
+					if v.id != "" {
+						w.WriteHeader(http.StatusNotFound)
+					} else {
+						w.WriteHeader(http.StatusBadRequest)
+					}
+				}
+				if v.delete {
+					w.WriteHeader(http.StatusNoContent)
+				}
+				http.ServeFile(w, r, v.expectedResponse)
+			})
+
+			sdapi, err := New(mockSDContext, nil)
+			if err != nil {
+				t.Fatal("should not cause error")
+			}
+
+			banner, err := sdapi.UpdateBanner(dummyID, dummyMessage, dummyType, dummyIsActive, v.delete, false)
+			switch v.expectedResult {
+			case true:
+				if err != nil {
+					t.Errorf("error should be nil but: '%v'", err)
+				}
+
+				expctedResponseJSONFile, err := ioutil.ReadFile(v.expectedResponse)
+				if err != nil && !v.delete {
+					t.Fatal("should not cause error")
+				}
+				expectedResponseJSON := new(BannerResponse)
+				err = json.Unmarshal(expctedResponseJSONFile, expectedResponseJSON)
+
+				if diff := cmp.Diff(expectedResponseJSON, &banner); diff != "" {
+					t.Errorf("mismatch (-want +got):\n%s", diff)
+				}
+			case false:
+				if err == nil {
+					t.Errorf("error should not be nil but nil")
+				} else {
+					fmt.Printf("%v\n", err)
+				}
+			}
+		})
+	}
+}
+
 func TestPostEvent(t *testing.T) {
 	cases := map[string]struct {
 		expectedResult        bool
@@ -223,7 +395,7 @@ func TestPostEvent(t *testing.T) {
 
 func TestValidator(t *testing.T) {
 	cases := map[string]struct {
-		expectedHttpResult     bool
+		expectedHTTPResult     bool
 		output                 bool
 		expectedResponse       string
 		expectedRetry          bool
@@ -296,7 +468,7 @@ func TestValidator(t *testing.T) {
 				if v.expectedRetry {
 					jwt := r.Header.Get("Authorization")
 					if jwt == "Bearer thisissdjwttoken" {
-						if !v.expectedHttpResult {
+						if !v.expectedHTTPResult {
 							w.WriteHeader(http.StatusInternalServerError)
 						}
 						http.ServeFile(w, r, v.expectedRetryResponse)
@@ -304,7 +476,7 @@ func TestValidator(t *testing.T) {
 					}
 					w.WriteHeader(http.StatusUnauthorized)
 				} else {
-					if !v.expectedHttpResult {
+					if !v.expectedHTTPResult {
 						w.WriteHeader(http.StatusInternalServerError)
 					}
 				}
@@ -340,7 +512,7 @@ func TestValidator(t *testing.T) {
 
 func TestValidatorTemplate(t *testing.T) {
 	cases := map[string]struct {
-		expectedHttpResult     bool
+		expectedHTTPResult     bool
 		expectedResponse       string
 		expectedRetry          bool
 		expectedRetryResponse  string
@@ -399,7 +571,7 @@ func TestValidatorTemplate(t *testing.T) {
 				if v.expectedRetry {
 					jwt := r.Header.Get("Authorization")
 					if jwt == "Bearer thisissdjwttoken" {
-						if !v.expectedHttpResult {
+						if !v.expectedHTTPResult {
 							w.WriteHeader(http.StatusInternalServerError)
 						}
 						http.ServeFile(w, r, v.expectedRetryResponse)
@@ -407,7 +579,7 @@ func TestValidatorTemplate(t *testing.T) {
 					}
 					w.WriteHeader(http.StatusUnauthorized)
 				} else {
-					if !v.expectedHttpResult {
+					if !v.expectedHTTPResult {
 						w.WriteHeader(http.StatusInternalServerError)
 					}
 				}
