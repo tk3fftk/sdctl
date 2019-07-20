@@ -24,6 +24,7 @@ func NewCmdSetJWT(config sdctl_context.SdctlConfig, api sdapi.SDAPI) *cobra.Comm
 			return o.Run(cmd, args)
 		},
 		SilenceUsage: true,
+		SilenceErrors: true,
 	}
 	return cmd
 }

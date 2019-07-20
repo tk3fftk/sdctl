@@ -23,6 +23,7 @@ func NewCmdBannerGet(api sdapi.SDAPI) *cobra.Command {
 			return o.Run(cmd, args)
 		},
 		SilenceUsage: true,
+		SilenceErrors: true,
 	}
 	return cmd
 }

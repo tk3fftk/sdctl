@@ -24,6 +24,7 @@ func NewCmdValidateTemplate(api sdapi.SDAPI) *cobra.Command {
 			return o.Run(cmd, args)
 		},
 		SilenceUsage: true,
+		SilenceErrors: true,
 	}
 	cmd.Flags().StringVarP(&templateFilePATH, "file", "f", "sd-template.yaml", "specify template file path")
 	return cmd

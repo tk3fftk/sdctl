@@ -16,6 +16,7 @@ func NewCmd(config sdctl_context.SdctlConfig, api sdapi.SDAPI) *cobra.Command {
 			cmd.Help()
 		},
 		SilenceUsage: true,
+		SilenceErrors: true,
 	}
 
 	cmd.AddCommand(

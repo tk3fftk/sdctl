@@ -30,6 +30,7 @@ func NewCmdBannerUpdate(api sdapi.SDAPI) *cobra.Command {
 			return o.Run(cmd, args)
 		},
 		SilenceUsage: true,
+		SilenceErrors: true,
 	}
 
 	cmd.Flags().StringVarP(&id, "id", "i", "", "specify banner ID when update or delete")
