@@ -18,8 +18,8 @@ func NewCmdSetJWT(config sdctl_context.SdctlConfig, api sdapi.SDAPI) *cobra.Comm
 		API:    api,
 	}
 	cmd := &cobra.Command{
-		Use:   "JWT",
-		Short: "set your Screwdriver.cd JWT url",
+		Use:   "jwt",
+		Short: "set your Screwdriver.cd jwt url",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.Run(cmd, args)
 		},
