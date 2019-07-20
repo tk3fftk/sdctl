@@ -69,3 +69,36 @@ $ sdctl context set next
 $ sdctl set token <obtained-token>
 $ sdctl set api https://<your_screwdrivercd>
 ```
+
+- get banners
+```
+$ sdctl banner get
+ID	IsActive	Message
+22	false	testtesttest
+```
+
+- create a banner
+```
+$ sdctl banner set -m "test message"
+Successfully POST a banner ID 28
+$ sdctl banner get
+ID	IsActive	Message
+28	true	test message
+```
+
+- update a banner
+```
+$ sdctl banner set -i 28 -m "UPDATED: test message"
+Successfully PUT a banner ID 28
+$ sdctl banner get
+ID	IsActive	Message
+28	true	UPDATED: test message
+```
+
+- delete a banner
+```
+$ ./sdctl banner set -i 28 -d
+Successfully DELETE a banner ID 28
+$ ./sdctl banner get
+ID	IsActive	Message
+```
