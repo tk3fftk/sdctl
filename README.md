@@ -1,13 +1,14 @@
 ## sd-cli
 
 ```
-validate yamls, start build locally
+validate yamls, handle banners, start build from CLI
 
 Usage:
   sdctl [flags]
   sdctl [command]
 
 Available Commands:
+  banner            handle screwdriver banners
   build             start a job.
   clear             clear your setting and set to default
   context           handle screwdriver contexts
@@ -21,8 +22,7 @@ Flags:
   -h, --help      help for sdctl
       --version   version for sdctl
 
-Use "sdctl [command] --help" for more information about a command.
-```
+Use "sdctl [command] --help" for more information about a command.```
 
 ### Setup
 In case of using your screwdriver.cd cluster

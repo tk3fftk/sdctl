@@ -10,8 +10,8 @@ func NewCmd(config sdctl_context.SdctlConfig, api sdapi.SDAPI) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "sdctl",
 		Short:   "Screwdriver.cd API wrapper",
-		Long:    "validate yamls, start build locally",
-		Version: "0.1.0",
+		Long:    "validate yamls, handle banners, start build from CLI",
+		Version: "0.2.0",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
