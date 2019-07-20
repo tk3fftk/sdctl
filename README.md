@@ -28,6 +28,8 @@ Use "sdctl [command] --help" for more information about a command.```
 In case of using your screwdriver.cd cluster
 - Install sdctl
 ```
+
+```
 $ go get github.com/tk3fftk/sdctl
 ```
 - Get screwdriver user token from https://<your_screwdrivercd>/user-settings
