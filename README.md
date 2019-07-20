@@ -99,8 +99,8 @@ ID	IsActive	Message
 
 - delete a banner
 ```
-$ ./sdctl banner set -i 28 -d
+$ sdctl banner set -i 28 -d
 Successfully DELETE a banner ID 28
-$ ./sdctl banner get
+$ sdctl banner get
 ID	IsActive	Message
 ```
