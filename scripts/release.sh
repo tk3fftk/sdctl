@@ -1,7 +1,6 @@
 #!/bin/sh -e
 
 go get github.com/linyows/git-semv/cmd/git-semv
-go mod tidy
 
 echo "latest tag is '$(git-semv latest)'"
 
@@ -13,6 +12,8 @@ fi
 if echo "$latest_commit_log" | grep -E '^feat' > /dev/null ; then
   tag=$(git-semv minor)
 fi
+# remove git-semv from go.mod
+go mod tidy
 
 if [ -n "$tag" ]; then
   echo "next tag is '$tag'"
