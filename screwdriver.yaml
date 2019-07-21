@@ -14,3 +14,12 @@ jobs:
       - gofmt: (! gofmt -s -d . | grep '^')
       - test: go test ./... -coverprofile=${SD_ARTIFACTS_DIR}/coverage.out -cover -v
       - build: go build
+      - snapshot:   curl -sL https://git.io/goreleaser | bash -s -- --rm-dist --snapshot --skip-publish
+  release:
+    requires: [ test ]
+    environment:
+      SCM_USERNAME: tk3fftk
+    steps:
+      - release: ./scripts/release.sh
+    secrets:
+      - SCM_ACCESS_TOKEN
