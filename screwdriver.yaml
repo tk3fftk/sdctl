@@ -13,8 +13,7 @@ jobs:
       - go_vet: go vet ./...
       - gofmt: (! gofmt -s -d . | grep '^')
       - test: go test ./... -coverprofile=${SD_ARTIFACTS_DIR}/coverage.out -cover -v
-      - build: go build
-      - snapshot:   curl -sL https://git.io/goreleaser | bash -s -- --rm-dist --snapshot --skip-publish
+      - snapshot_build: curl -sL https://git.io/goreleaser | bash -s -- --rm-dist --snapshot --skip-publish
   release:
     requires: [ test ]
     environment:
