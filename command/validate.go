@@ -24,7 +24,7 @@ func NewCmdValidate(api sdapi.SDAPI) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.Run(cmd, args)
 		},
-		SilenceUsage: true,
+		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 	cmd.Flags().StringVarP(&pipelineFilePATH, "file", "f", "screwdriver.yaml", "specify pipeline file path")
