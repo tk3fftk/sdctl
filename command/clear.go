@@ -20,6 +20,8 @@ func NewCmdClear(config sdctl_context.SdctlConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.Run(cmd, args)
 		},
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 	return cmd
 }
