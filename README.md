@@ -24,10 +24,11 @@ Flags:
 
 Use "sdctl [command] --help" for more information about a command.```
 
+```
+
 ### Setup
 In case of using your screwdriver.cd cluster
 - Install sdctl
-```
 
 ```
 $ go get github.com/tk3fftk/sdctl
