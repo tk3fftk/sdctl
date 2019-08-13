@@ -614,7 +614,7 @@ func TestValidatorTemplate(t *testing.T) {
 	}
 }
 
-func TestgetPipelineSecrets(t *testing.T) {
+func TestGetPipelineSecrets(t *testing.T) {
 	pipelineID := 1111
 
 	cases := map[string]struct {
@@ -679,7 +679,7 @@ func TestgetPipelineSecrets(t *testing.T) {
 	}
 }
 
-func TestcreateSecret(t *testing.T) {
+func TestCreateSecret(t *testing.T) {
 	pipelineID := 1111
 	key := "secretKey"
 	value := "secretValue"
@@ -725,7 +725,7 @@ func TestcreateSecret(t *testing.T) {
 	}
 }
 
-func TestupdateSecret(t *testing.T) {
+func TestUpdateSecret(t *testing.T) {
 	secretID := 11
 	value := "secretValue"
 	allowInPR := false
@@ -770,7 +770,7 @@ func TestupdateSecret(t *testing.T) {
 	}
 }
 
-func TestUpdateSecret(t *testing.T) {
+func TestSetSecret(t *testing.T) {
 	pipelineID := 1111
 	value := "secretValue"
 	allowInPR := false
@@ -876,7 +876,7 @@ func TestUpdateSecret(t *testing.T) {
 			if err != nil {
 				t.Fatal("should not cause error")
 			}
-			actual := sdapi.UpdateSecret(pipelineID, v.key, value, allowInPR)
+			actual := sdapi.SetSecret(pipelineID, v.key, value, allowInPR)
 			if !reflect.DeepEqual(err, v.expectErr) {
 				t.Errorf("err should be %#v, but actual is %#v", v.expectErr, actual)
 			}

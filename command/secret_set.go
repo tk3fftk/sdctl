@@ -49,7 +49,7 @@ func (o *SecretSetOption) Run(cmd *cobra.Command, args []string) error {
 
 	// Screwdriver allow only "/^[A-Z_][A-Z0-9_]*$/]" as secret key
 	uppperKey := strings.ToUpper(o.SecretKey)
-	if err := o.API.UpdateSecret(pipelineIDNum, uppperKey, o.SecretValue, o.AllowInPR); err != nil {
+	if err := o.API.SetSecret(pipelineIDNum, uppperKey, o.SecretValue, o.AllowInPR); err != nil {
 		return fmt.Errorf("failed to set secret: %v", err)
 	}
 

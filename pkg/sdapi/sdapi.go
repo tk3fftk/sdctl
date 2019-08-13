@@ -377,7 +377,7 @@ type Secret struct {
 	AllowInPR  bool   `json:"allowInPR"`
 }
 
-func (sd *SDAPI) UpdateSecret(pipelineID int, key, value string, allowInPR bool) error {
+func (sd *SDAPI) SetSecret(pipelineID int, key, value string, allowInPR bool) error {
 
 	secrets, err := sd.getPipelineSecrets(pipelineID)
 	if err != nil {
