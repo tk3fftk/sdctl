@@ -105,3 +105,9 @@ Successfully DELETE a banner ID 28
 $ sdctl banner get
 ID	IsActive	Message
 ```
+
+- write a secret
+```bash
+$ sdctl secret set -p 1111 -k FOO -v bar 
+setting secret FOO is succuseed!
+```
