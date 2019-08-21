@@ -369,3 +369,97 @@ func (sd *SDAPI) getEvents(eventID int) (*eventResponse, error) {
 
 	return eventResponse, err
 }
+
+type Secret struct {
+	ID         int    `json:"id"`
+	PipelineID int    `json:"pipelineId"`
+	Name       string `json:"name"`
+	AllowInPR  bool   `json:"allowInPR"`
+}
+
+func (sd *SDAPI) SetSecret(pipelineID int, key, value string, allowInPR bool) error {
+
+	secrets, err := sd.getPipelineSecrets(pipelineID)
+	if err != nil {
+		return err
+	}
+
+	duplicatedKeyID, exist := sd.checkKey(secrets, key)
+
+	if !exist {
+		return sd.createSecret(pipelineID, key, value, allowInPR)
+	}
+
+	return sd.updateSecret(duplicatedKeyID, value, allowInPR)
+}
+
+func (sd *SDAPI) getPipelineSecrets(pipelineID int) ([]Secret, error) {
+	path := fmt.Sprintf("/v4/pipelines/%d/secrets?token=%s", pipelineID, sd.sdctx.SDJWT)
+	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GET %s status code is not %d: %d", path, http.StatusOK, res.StatusCode)
+	}
+	var secrets []Secret
+	if err := json.NewDecoder(res.Body).Decode(&secrets); err != nil {
+		return nil, err
+	}
+
+	return secrets, nil
+}
+
+func (sd *SDAPI) checkKey(secrets []Secret, key string) (int, bool) {
+	for _, s := range secrets {
+		if s.Name == key {
+			return s.ID, true
+		}
+	}
+	return 0, false
+}
+
+func (sd *SDAPI) createSecret(pipelineID int, key, value string, allowInPR bool) error {
+	path := "/v4/secrets"
+	body := make(map[string]interface{})
+	body["pipelineId"] = pipelineID
+	body["name"] = key
+	body["value"] = value
+	body["allowInPR"] = allowInPR
+	bodyJSON, err := json.Marshal(&body)
+	if err != nil {
+		return err
+	}
+	res, err := sd.request(context.TODO(), http.MethodPost, path, bytes.NewBuffer(bodyJSON))
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusCreated {
+		return fmt.Errorf("POST %s status code is not %d: %d", path, http.StatusCreated, res.StatusCode)
+	}
+	return nil
+}
+
+func (sd *SDAPI) updateSecret(secretID int, value string, allowInPR bool) error {
+	path := fmt.Sprintf("/v4/secrets/%d", secretID)
+	body := make(map[string]interface{})
+	body["value"] = value
+	body["allowInPR"] = allowInPR
+	bodyJSON, err := json.Marshal(&body)
+	if err != nil {
+		return err
+	}
+	res, err := sd.request(context.TODO(), http.MethodPut, path, bytes.NewBuffer(bodyJSON))
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("PUT %s status code is not %d: %d", path, http.StatusOK, res.StatusCode)
+	}
+	return nil
+}

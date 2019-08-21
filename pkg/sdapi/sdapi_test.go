@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -608,6 +609,283 @@ func TestValidatorTemplate(t *testing.T) {
 				} else {
 					fmt.Printf("%v\n", err)
 				}
+			}
+		})
+	}
+}
+
+func TestGetPipelineSecrets(t *testing.T) {
+	pipelineID := 1111
+
+	cases := map[string]struct {
+		secretsStatusCode int
+		expectSecrets     []Secret
+		expectErr         error
+	}{
+		"Get secrets successfully": {
+			http.StatusOK,
+			[]Secret{
+				{
+					ID:         11,
+					PipelineID: pipelineID,
+					Name:       "name1",
+					AllowInPR:  true,
+				},
+				{
+					ID:         12,
+					PipelineID: pipelineID,
+					Name:       "name2",
+					AllowInPR:  false,
+				},
+			},
+			nil,
+		},
+		"Failed to get secrets because of invalid status code": {
+			http.StatusUnauthorized,
+			nil,
+			fmt.Errorf("GET /v4/pipelines/%d/secrets?token=invalid_jwt status code is not %d: %d", pipelineID, http.StatusOK, http.StatusUnauthorized),
+		},
+	}
+
+	for k, v := range cases {
+		k := k
+		v := v
+		t.Run(k, func(t *testing.T) {
+			muxAPI := http.NewServeMux()
+			testAPIServer := httptest.NewServer(muxAPI)
+			defer testAPIServer.Close()
+
+			path := fmt.Sprintf("/v4/pipelines/%d/secrets", pipelineID)
+
+			muxAPI.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(v.secretsStatusCode)
+				secretsJSON, _ := json.Marshal(v.expectSecrets)
+				w.Write(secretsJSON)
+			})
+
+			mockSDContext.APIURL = testAPIServer.URL
+			sdapi, err := New(mockSDContext, nil)
+			if err != nil {
+				t.Fatal("should not cause error")
+			}
+			secrets, err := sdapi.getPipelineSecrets(pipelineID)
+			if !reflect.DeepEqual(err, v.expectErr) {
+				t.Errorf("err should be %#v, but actual is %#v", v.expectErr, err)
+			}
+			if !reflect.DeepEqual(secrets, v.expectSecrets) {
+				t.Errorf("secrets should be %#v, but actual is %#v", v.expectSecrets, secrets)
+			}
+		})
+	}
+}
+
+func TestCreateSecret(t *testing.T) {
+	pipelineID := 1111
+	key := "secretKey"
+	value := "secretValue"
+	allowInPR := false
+
+	cases := map[string]struct {
+		createdStatusCode int
+		expectErr         error
+	}{
+		"Create a secret successfully": {
+			http.StatusCreated,
+			nil,
+		},
+		"Failed to create a secrets because of invalid status code": {
+			http.StatusUnauthorized,
+			fmt.Errorf("POST /v4/secrets status code is not %d: %d", http.StatusCreated, http.StatusUnauthorized),
+		},
+	}
+
+	for k, v := range cases {
+		k := k
+		v := v
+		t.Run(k, func(t *testing.T) {
+			muxAPI := http.NewServeMux()
+			testAPIServer := httptest.NewServer(muxAPI)
+			defer testAPIServer.Close()
+
+			path := "/v4/secrets"
+			muxAPI.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(v.createdStatusCode)
+			})
+
+			mockSDContext.APIURL = testAPIServer.URL
+			sdapi, err := New(mockSDContext, nil)
+			if err != nil {
+				t.Fatal("should not cause error")
+			}
+			actual := sdapi.createSecret(pipelineID, key, value, allowInPR)
+			if !reflect.DeepEqual(actual, v.expectErr) {
+				t.Errorf("err should be %#v, but actual is %#v", v.expectErr, actual)
+			}
+		})
+	}
+}
+
+func TestUpdateSecret(t *testing.T) {
+	secretID := 11
+	value := "secretValue"
+	allowInPR := false
+
+	cases := map[string]struct {
+		updatedStatusCode int
+		expectErr         error
+	}{
+		"Updated a secret successfully": {
+			http.StatusOK,
+			nil,
+		},
+		"Failed to update a secret because of invalid status code": {
+			http.StatusUnauthorized,
+			fmt.Errorf("PUT /v4/secrets/%d status code is not %d: %d", secretID, http.StatusOK, http.StatusUnauthorized),
+		},
+	}
+
+	for k, v := range cases {
+		k := k
+		v := v
+		t.Run(k, func(t *testing.T) {
+			muxAPI := http.NewServeMux()
+			testAPIServer := httptest.NewServer(muxAPI)
+			defer testAPIServer.Close()
+
+			path := fmt.Sprintf("/v4/secrets/%d", secretID)
+			muxAPI.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(v.updatedStatusCode)
+			})
+
+			mockSDContext.APIURL = testAPIServer.URL
+			sdapi, err := New(mockSDContext, nil)
+			if err != nil {
+				t.Fatal("should not cause error")
+			}
+			actual := sdapi.updateSecret(secretID, value, allowInPR)
+			if !reflect.DeepEqual(actual, v.expectErr) {
+				t.Errorf("err should be %#v, but actual is %#v", v.expectErr, actual)
+			}
+		})
+	}
+}
+
+func TestSetSecret(t *testing.T) {
+	pipelineID := 1111
+	value := "secretValue"
+	allowInPR := false
+	cases := map[string]struct {
+		key     string
+		secrets []Secret
+
+		secretsStatusCode int
+		createdStatusCode int
+		updatedStatusCode int
+
+		createCount int
+		updateCount int
+
+		expectErr error
+	}{
+		"Create a secret successfully": {
+			"name3",
+			[]Secret{
+				{
+					ID:         11,
+					PipelineID: pipelineID,
+					Name:       "name1",
+					AllowInPR:  true,
+				},
+				{
+					ID:         12,
+					PipelineID: pipelineID,
+					Name:       "name2",
+					AllowInPR:  false,
+				},
+			},
+			http.StatusOK,
+			http.StatusCreated,
+			0,
+			1,
+			0,
+			nil,
+		},
+		"Update a secret successfully": {
+			"name1",
+			[]Secret{
+				{
+					ID:         11,
+					PipelineID: pipelineID,
+					Name:       "name1",
+					AllowInPR:  true,
+				},
+				{
+					ID:         12,
+					PipelineID: pipelineID,
+					Name:       "name2",
+					AllowInPR:  false,
+				},
+			},
+			http.StatusOK,
+			0,
+			http.StatusOK,
+			0,
+			1,
+			nil,
+		},
+	}
+
+	for k, v := range cases {
+		k := k
+		v := v
+		t.Run(k, func(t *testing.T) {
+			muxAPI := http.NewServeMux()
+			testAPIServer := httptest.NewServer(muxAPI)
+			defer testAPIServer.Close()
+
+			pipelineSecretPATH := fmt.Sprintf("/v4/pipelines/%d/secrets", pipelineID)
+
+			muxAPI.HandleFunc(pipelineSecretPATH, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(v.secretsStatusCode)
+				secretsJSON, _ := json.Marshal(v.secrets)
+				w.Write(secretsJSON)
+			})
+
+			var (
+				createCount int
+				updateCount int
+			)
+			if v.createdStatusCode != 0 {
+				createSecretPATH := "/v4/secrets"
+				muxAPI.HandleFunc(createSecretPATH, func(w http.ResponseWriter, r *http.Request) {
+					createCount++
+					w.WriteHeader(v.createdStatusCode)
+				})
+			}
+
+			if v.updatedStatusCode != 0 {
+				updateSecretPATH := fmt.Sprintf("/v4/secrets/%d", 11)
+				muxAPI.HandleFunc(updateSecretPATH, func(w http.ResponseWriter, r *http.Request) {
+					updateCount++
+					w.WriteHeader(v.updatedStatusCode)
+				})
+			}
+
+			mockSDContext.APIURL = testAPIServer.URL
+			sdapi, err := New(mockSDContext, nil)
+			if err != nil {
+				t.Fatal("should not cause error")
+			}
+			actual := sdapi.SetSecret(pipelineID, v.key, value, allowInPR)
+			if !reflect.DeepEqual(err, v.expectErr) {
+				t.Errorf("err should be %#v, but actual is %#v", v.expectErr, actual)
+			}
+
+			if createCount != v.createCount {
+				t.Errorf("create count should be %d, but actual is %d", v.createCount, createCount)
+			}
+			if updateCount != v.updateCount {
+				t.Errorf("update count should be %d, but actual is %d", v.updateCount, updateCount)
 			}
 		})
 	}
