@@ -49,22 +49,22 @@ type tokenResponse struct {
 }
 
 type pipelineResponse struct {
-	Name string `json:"name"`
-	SCMRepo struct{
-		Name string `json:"name"`
+	Name    string `json:"name"`
+	SCMRepo struct {
+		Name   string `json:"name"`
 		Branch string `json:"branch"`
-		URL string `json:"url"`
+		URL    string `json:"url"`
 	} `json:"scmRepo"`
 }
 
 type buildResponse struct {
 	EventID int `json:"eventId"`
-	JobID int `json:"jobId"`
+	JobID   int `json:"jobId"`
 }
 
 type jobResponse struct {
-	PipelineID int `json:"pipelineId"`
-	Name string `json:"name"`
+	PipelineID int    `json:"pipelineId"`
+	Name       string `json:"name"`
 }
 
 type eventResponse struct {
