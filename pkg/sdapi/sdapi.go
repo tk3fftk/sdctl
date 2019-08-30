@@ -329,7 +329,7 @@ func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 	wg.Add(buildIDLength)
 
 	exit := make(chan error, buildIDLength)
-	fmt.Fprintf(os.Stdout, "%-80v%-15v\n", "buildURL", "repo (job)")
+	fmt.Fprintf(os.Stdout, "%-80v%-15v\n", "BuildURL", "Repo (Job)")
 	for _, b := range buildIDList {
 		go func(b string) {
 			defer wg.Done()
