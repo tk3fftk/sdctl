@@ -41,8 +41,12 @@ func (o *BannerGetOption) Run(cmd *cobra.Command, args []string) error {
 }
 
 func (o *BannerGetOption) print(banners []sdapi.BannerResponse) {
-	fmt.Fprintf(os.Stdout, "ID\tIsActive\tMessage\n")
+	o.printColumn("ID", "IsActive", "Message")
 	for _, b := range banners {
-		fmt.Fprintf(os.Stdout, "%v\t%v\t%v\n", b.ID, b.IsActive, b.Message)
+		o.printColumn(b.ID, b.IsActive, b.Message)
 	}
+}
+
+func (o *BannerGetOption) printColumn(id, isActive, msg interface{}) {
+	fmt.Fprintf(os.Stdout, "%-8v%-12v%v\n", id, isActive, msg)
 }

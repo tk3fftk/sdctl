@@ -329,7 +329,7 @@ func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 	wg.Add(buildIDLength)
 
 	exit := make(chan error, buildIDLength)
-
+	fmt.Fprintf(os.Stdout, "%-80v%-15v\n", "BuildURL", "Repo (Job)")
 	for _, b := range buildIDList {
 		go func(b string) {
 			defer wg.Done()
@@ -349,7 +349,9 @@ func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 				exit <- err
 				return
 			}
-			fmt.Println(basePipelineURL + strconv.Itoa(jr.PipelineID) + "/builds/" + b + "\t" + pr.SCMRepo.Name + "(" + jr.Name + ")")
+			buildURL := fmt.Sprintf("%s%d/builds/%s", basePipelineURL, jr.PipelineID, b)
+			repoJob := fmt.Sprintf("%s (%s)", pr.SCMRepo.Name, jr.Name)
+			fmt.Fprintf(os.Stdout, "%-80v%-15v\n", buildURL, repoJob)
 		}(b)
 	}
 
