@@ -48,6 +48,15 @@ type tokenResponse struct {
 	JWT string `json:"token"`
 }
 
+type pipelineResponse struct {
+	Name string `json:"name"`
+	SCMRepo struct{
+		Name string `json:"name"`
+		Branch string `json:"branch"`
+		URL string `json:"url"`
+	} `json:"scmRepo"`
+}
+
 type buildResponse struct {
 	EventID int `json:"eventId"`
 	JobID int `json:"jobId"`
@@ -314,6 +323,7 @@ func (sd *SDAPI) ValidatorTemplate(yaml string, retried bool) error {
 func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 	buildIDList := strings.Split(strings.Replace(strings.TrimSpace(buildID), "\n", " ", -1), " ")
 	buildIDLength := len(buildIDList)
+	basePipelineURL := strings.Replace(sd.sdctx.APIURL, "api-cd", "cd", 1) + "/pipelines/"
 
 	var wg sync.WaitGroup
 	wg.Add(buildIDLength)
@@ -324,17 +334,22 @@ func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 		go func(b string) {
 			defer wg.Done()
 
-			br, err := sd.getBuilds(b)
+			br, err := sd.getBuild(b)
 			if err != nil {
 				exit <- err
 				return
 			}
-			er, err := sd.getJobs(br.JobID)
+			jr, err := sd.getJob(br.JobID)
 			if err != nil {
 				exit <- err
 				return
 			}
-			println(strings.Replace(sd.sdctx.APIURL, "api-cd", "cd", 1) + "/pipelines/" + strconv.Itoa(er.PipelineID) + "/builds/" + b)
+			pr, err := sd.getPipeline(jr.PipelineID)
+			if err != nil {
+				exit <- err
+				return
+			}
+			fmt.Println(basePipelineURL + strconv.Itoa(jr.PipelineID) + "/builds/" + b + "\t" + pr.SCMRepo.Name + "(" + jr.Name + ")")
 		}(b)
 	}
 
@@ -348,7 +363,21 @@ func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 	}
 }
 
-func (sd *SDAPI) getBuilds(buildID string) (*buildResponse, error) {
+func (sd *SDAPI) getPipeline(pipelineID int) (*pipelineResponse, error) {
+	path := "/v4/pipelines/" + strconv.Itoa(pipelineID) + "?token=" + sd.sdctx.SDJWT
+	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	pipelineResponse := new(pipelineResponse)
+	err = json.NewDecoder(res.Body).Decode(pipelineResponse)
+
+	return pipelineResponse, err
+}
+
+func (sd *SDAPI) getBuild(buildID string) (*buildResponse, error) {
 	path := "/v4/builds/" + buildID + "?token=" + sd.sdctx.SDJWT
 	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
 	if err != nil {
@@ -362,7 +391,7 @@ func (sd *SDAPI) getBuilds(buildID string) (*buildResponse, error) {
 	return buildResponse, err
 }
 
-func (sd *SDAPI) getJobs(jobID int) (*jobResponse, error) {
+func (sd *SDAPI) getJob(jobID int) (*jobResponse, error) {
 	path := "/v4/jobs/" + strconv.Itoa(jobID) + "?token=" + sd.sdctx.SDJWT
 	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
 	if err != nil {
@@ -376,7 +405,7 @@ func (sd *SDAPI) getJobs(jobID int) (*jobResponse, error) {
 	return jobResponse, err
 }
 
-func (sd *SDAPI) getEvents(eventID int) (*eventResponse, error) {
+func (sd *SDAPI) getEvent(eventID int) (*eventResponse, error) {
 	path := "/v4/events/" + strconv.Itoa(eventID) + "?token=" + sd.sdctx.SDJWT
 	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
 	if err != nil {
