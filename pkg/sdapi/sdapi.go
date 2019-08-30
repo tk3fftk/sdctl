@@ -50,6 +50,12 @@ type tokenResponse struct {
 
 type buildResponse struct {
 	EventID int `json:"eventId"`
+	JobID int `json:"jobId"`
+}
+
+type jobResponse struct {
+	PipelineID int `json:"pipelineId"`
+	Name string `json:"name"`
 }
 
 type eventResponse struct {
@@ -323,7 +329,7 @@ func (sd *SDAPI) GetPipelinePageFromBuildID(buildID string) error {
 				exit <- err
 				return
 			}
-			er, err := sd.getEvents(br.EventID)
+			er, err := sd.getJobs(br.JobID)
 			if err != nil {
 				exit <- err
 				return
@@ -354,6 +360,20 @@ func (sd *SDAPI) getBuilds(buildID string) (*buildResponse, error) {
 	err = json.NewDecoder(res.Body).Decode(buildResponse)
 
 	return buildResponse, err
+}
+
+func (sd *SDAPI) getJobs(jobID int) (*jobResponse, error) {
+	path := "/v4/jobs/" + strconv.Itoa(jobID) + "?token=" + sd.sdctx.SDJWT
+	res, err := sd.request(context.TODO(), http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	jobResponse := new(jobResponse)
+	err = json.NewDecoder(res.Body).Decode(jobResponse)
+
+	return jobResponse, err
 }
 
 func (sd *SDAPI) getEvents(eventID int) (*eventResponse, error) {
