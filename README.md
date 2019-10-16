@@ -1,4 +1,4 @@
-## sd-cli
+## sdctl
 
 ```
 validate yamls, handle banners, start build from CLI
