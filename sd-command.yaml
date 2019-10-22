@@ -29,7 +29,7 @@ usage: |
      --help, -h     show help
      --version, -v  print the version
   COPYRIGHT:
-     hitakats
+     tk3fftk
 maintainer: tktk.stereoman@gmail.com
 # Major and Minor version number (patch is automatic)
 version: 0.1.0
