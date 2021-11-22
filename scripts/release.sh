@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-go get github.com/linyows/git-semv/cmd/git-semv
+go install github.com/linyows/git-semv/cmd/git-semv
 
 echo "latest tag is '$(git-semv latest)'"
 
