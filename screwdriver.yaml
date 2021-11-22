@@ -9,7 +9,9 @@ jobs:
     environment:
       SD_SONAR_OPTS: "-Dsonar.sources=./  -Dsonar.exclusions=**/*_test.go,**/sonar-scanner*/** -Dsonar.go.coverage.reportPaths=/sd/workspace/artifacts/coverage.out"
     steps:
-      - go_mod_download: go mod download
+      - go_mod: |
+          go mod download
+          go mod tidy
       - go_vet: go vet ./...
       - gofmt: (! gofmt -s -d . | grep '^')
       - test: go test ./... -coverprofile=${SD_ARTIFACTS_DIR}/coverage.out -cover -v
