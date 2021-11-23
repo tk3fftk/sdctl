@@ -1,5 +1,5 @@
 shared:
-  image: golang:1.12.3
+  image: golang:1.17
   environment:
     GO111MODULE: on
 
@@ -9,6 +9,9 @@ jobs:
     environment:
       SD_SONAR_OPTS: "-Dsonar.sources=./  -Dsonar.exclusions=**/*_test.go,**/sonar-scanner*/** -Dsonar.go.coverage.reportPaths=/sd/workspace/artifacts/coverage.out"
     steps:
+      - go_mod: |
+          go mod download
+          go mod tidy
       - go_vet: go vet ./...
       - gofmt: (! gofmt -s -d . | grep '^')
       - test: go test ./... -coverprofile=${SD_ARTIFACTS_DIR}/coverage.out -cover -v
