@@ -1,8 +1,6 @@
 #!/bin/sh -e
 
-go mod download
-go mod tidy
-go install github.com/linyows/git-semv/cmd/git-semv
+go install github.com/linyows/git-semv/cmd/git-semv@latest
 
 echo "latest tag is '$(git-semv latest)'"
 
