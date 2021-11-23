@@ -31,7 +31,7 @@ In case of using your screwdriver.cd cluster
 - Install sdctl
 
 ```
-$ go get github.com/tk3fftk/sdctl
+$ go install github.com/tk3fftk/sdctl@latest
 ```
 - Get screwdriver user token from https://<your_screwdrivercd>/user-settings
 - Set configurations
