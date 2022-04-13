@@ -15,7 +15,7 @@ builds:
   - linux
   goarch:
   - amd64
-  #- 386
+  - arm64
   ldflags:
   - -s -w
     -X github.com/tk3fftk/sdctl/command.version={{.Version}}
@@ -39,3 +39,5 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
+universal_binaries:
+- replace: true
